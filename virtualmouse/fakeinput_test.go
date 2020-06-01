@@ -3,26 +3,10 @@ package main
 import (
 	"fmt"
 	"testing"
-	"github.com/BurntSushi/xgb"
-	"github.com/BurntSushi/xgb/xproto"
-	"github.com/BurntSushi/xgb/xtest"
 )
 
 func TestFakeInput(t *testing.T) {
-	X, err := xgb.NewConnDisplay(":3")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	
-    setup := xproto.Setup(X)
-	screen := setup.DefaultScreen(X)
-
-	xtesterr := xtest.Init(X)
-	if xtesterr != nil {
-		fmt.Printf("Error: %s\n", xtesterr)
-	}
-
+	a := establishConn()
 	tables := []struct {
 		x int16
 		y int16
@@ -38,15 +22,17 @@ func TestFakeInput(t *testing.T) {
 		
 		t.Run(testname, func(t *testing.T) {
 
-		fakeinput(X, screen.Root, table.x, table.y)
-		c := xproto.QueryPointer(X , screen.Root)
+		a.fakeinput(table.x, table.y)
+		/*c := xproto.QueryPointer(a.conn, a.wid)
 		p, ptrqueryerr := c.Reply()
 		
 		if ptrqueryerr != nil {
-		}
+		}*/
+		p,q := a.getPointer()
 		
-		if table.x != p.WinX || table.y != p.WinY {
-			t.Errorf("didn't work")
+		if table.x != p || table.y != q {
+			t.Errorf("fakeinput(%v, %v) moves cursor to (%v , %v) , want (%v , %v)",table.x, 
+			table.y, p, q, table.x, table.y)
 		}
 	})
 	}

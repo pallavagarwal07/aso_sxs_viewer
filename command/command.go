@@ -2,7 +2,6 @@ package command
 
 import (
 	"io"
-	"io/ioutil"
 	"os/exec"
 )
 
@@ -22,12 +21,10 @@ type ProgramState struct {
 }
 
 // ExecuteProgram invokes an external program
-func ExecuteProgram(command ExternalCommand, errorHandler func(*exec.Cmd, error) error) (*ProgramState, error) {
+func ExecuteProgram(command ExternalCommand, errorHandler func(*ProgramState, error) error) (*ProgramState, error) {
 	var err error
 	programState := &ProgramState{}
-	cmd := exec.Command(
-		command.Path,
-		command.Arg...)
+	cmd := exec.Command(command.Path, command.Arg...)
 	cmd.Env = command.Env
 	programState.Command = cmd
 
@@ -35,49 +32,59 @@ func ExecuteProgram(command ExternalCommand, errorHandler func(*exec.Cmd, error)
 	if err != nil {
 		return programState, err
 	}
-
 	programState.stderrPipe, err = cmd.StderrPipe()
 	if err != nil {
 		return programState, err
 	}
+
 	if err := cmd.Start(); err != nil {
 		return programState, err
 	}
-	programState.StdoutNonBlocking()
-	go CloseProgram(cmd, programState, errorHandler)
+
+	go CloseProgram(programState, errorHandler)
 
 	return programState, err
 }
 
-func CloseProgram(cmd *exec.Cmd, programState *ProgramState, errorHandler func(*exec.Cmd, error) error) {
+func CloseProgram(programState *ProgramState, errorHandler func(*ProgramState, error) error) {
 
-	programState.StderrNonBlocking()
-	programState.StdoutNonBlocking()
-	if err := cmd.Wait(); err != nil {
-		errorHandler(cmd, err)
+	_, err := programState.StderrNonBlocking()
+	if err != nil {
+		errorHandler(programState, err)
+		return
 	}
+	_, err = programState.StdoutNonBlocking()
+	if err != nil {
+		errorHandler(programState, err)
+		return
+	}
+
+	err = programState.Command.Wait()
+	errorHandler(programState, err)
+
 }
 
 func (p *ProgramState) StdoutNonBlocking() ([]byte, error) {
 
-	stdout, err := ioutil.ReadAll(p.stdoutPipe)
-	if err != nil {
-		return p.stdout, err
-	}
+	return NonBlockingCall(p.stdoutPipe, p.stdout)
 
-	p.stdout = append(p.stdout, stdout...)
-	return p.stdout, err
 }
 
 func (p *ProgramState) StderrNonBlocking() ([]byte, error) {
 
-	stderr, err := ioutil.ReadAll(p.stderrPipe)
-	if err != nil {
-		return p.stdout, err
-	}
+	return NonBlockingCall(p.stderrPipe, p.stderr)
+}
 
-	p.stderr = append(p.stderr, stderr...)
-	return p.stderr, err
+func NonBlockingCall(pipe io.ReadCloser, buffer []byte) ([]byte, error) {
+
+	var output []byte
+	n, err := pipe.Read(output)
+	if n > 0 && err == nil {
+		buffer = append(buffer, output[:n]...)
+	} else if n == 0 && err == io.EOF {
+		err = nil
+	}
+	return buffer, err
 }
 
 func (p *ProgramState) isRunning() bool {

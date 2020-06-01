@@ -1,91 +1,75 @@
 package command
 
 import (
-	"bufio"
+	"io/ioutil"
 	"os/exec"
-	"time"
 )
 
 // ExternalCommand has the properties for invoking exec.Command
 type ExternalCommand struct {
-	path string
-	arg  []string
-	env  []string
+	Path string
+	Arg  []string
+	Env  []string
 }
 
-type Status struct {
-	isRunning bool
-	err       error
+type ProgramState struct {
+	Command *exec.Cmd
+	stdout  []byte
+	stderr  []byte
 }
 
 // ExecuteProgram invokes an external program
-func ExecuteProgram(command ExternalCommand, stdout []byte, stderr []byte, status chan Status) error {
+func ExecuteProgram(command ExternalCommand, errorHandler func(*exec.Cmd, error)) (*ProgramState, error) {
 	var err error
+	programState := &ProgramState{}
 	cmd := exec.Command(
-		command.path,
-		command.arg...)
-	cmd.Env = command.env
-
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		status <- Status{
-			isRunning: false,
-			err:       err,
-		}
-		return err
-	}
-	stdoutPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		status <- Status{
-			isRunning: false,
-			err:       err,
-		}
-		return err
-	}
-
-	stderrReader := bufio.NewReader(stderrPipe)
-	stdoutReader := bufio.NewReader(stdoutPipe)
+		command.Path,
+		command.Arg...)
+	cmd.Env = command.Env
+	programState.Command = cmd
 
 	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	// TODO: check if client is ready
-	time.Sleep(100 * time.Millisecond)
-	status <- Status{
-		isRunning: true,
-		err:       err,
-	}
-
-	stderr, err = stderrReader.ReadBytes('\n')
-	if err != nil {
-		status <- Status{
-			isRunning: false,
-			err:       err,
-		}
-		return err
-	}
-	stdout, err = stdoutReader.ReadBytes('\n')
-	if err != nil {
-		status <- Status{
-			isRunning: false,
-			err:       err,
-		}
-		return err
+		errorHandler(cmd, err)
+		return programState, err
 	}
 
 	if err := cmd.Wait(); err != nil {
-		status <- Status{
-			isRunning: false,
-			err:       err,
-		}
-		return err
+		return programState, err
 	}
 
-	status <- Status{
-		isRunning: false,
-		err:       err,
+	return programState, err
+}
+
+func (p *ProgramState) StdoutNonBlocking() ([]byte, error) {
+	stdoutPipe, err := p.Command.StdoutPipe()
+	if err != nil {
+		return p.stdout, err
 	}
-	close(status)
-	return err
+
+	stdout, err := ioutil.ReadAll(stdoutPipe)
+	if err != nil {
+		return p.stdout, err
+	}
+
+	p.stdout = append(p.stdout, stdout...)
+	return p.stdout, err
+}
+
+func (p *ProgramState) StderrNonBlocking() ([]byte, error) {
+	stderrPipe, err := p.Command.StderrPipe()
+	if err != nil {
+		return p.stderr, err
+	}
+
+	stderr, err := ioutil.ReadAll(stderrPipe)
+	if err != nil {
+		return p.stdout, err
+	}
+
+	p.stderr = append(p.stderr, stderr...)
+	return p.stderr, err
+}
+
+func (p *ProgramState) isRunning() bool {
+	return !p.Command.ProcessState.Exited()
 }

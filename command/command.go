@@ -1,6 +1,7 @@
 package command
 
 import (
+	"io"
 	"io/ioutil"
 	"os/exec"
 )
@@ -13,13 +14,15 @@ type ExternalCommand struct {
 }
 
 type ProgramState struct {
-	Command *exec.Cmd
-	stdout  []byte
-	stderr  []byte
+	Command    *exec.Cmd
+	stdoutPipe io.ReadCloser
+	stderrPipe io.ReadCloser
+	stdout     []byte
+	stderr     []byte
 }
 
 // ExecuteProgram invokes an external program
-func ExecuteProgram(command ExternalCommand, errorHandler func(*exec.Cmd, error)) (*ProgramState, error) {
+func ExecuteProgram(command ExternalCommand, errorHandler func(*exec.Cmd, error) error) (*ProgramState, error) {
 	var err error
 	programState := &ProgramState{}
 	cmd := exec.Command(
@@ -28,25 +31,36 @@ func ExecuteProgram(command ExternalCommand, errorHandler func(*exec.Cmd, error)
 	cmd.Env = command.Env
 	programState.Command = cmd
 
-	if err := cmd.Start(); err != nil {
-		errorHandler(cmd, err)
+	programState.stdoutPipe, err = cmd.StdoutPipe()
+	if err != nil {
 		return programState, err
 	}
 
-	if err := cmd.Wait(); err != nil {
+	programState.stderrPipe, err = cmd.StderrPipe()
+	if err != nil {
 		return programState, err
 	}
+	if err := cmd.Start(); err != nil {
+		return programState, err
+	}
+	programState.StdoutNonBlocking()
+	go CloseProgram(cmd, programState, errorHandler)
 
 	return programState, err
 }
 
-func (p *ProgramState) StdoutNonBlocking() ([]byte, error) {
-	stdoutPipe, err := p.Command.StdoutPipe()
-	if err != nil {
-		return p.stdout, err
-	}
+func CloseProgram(cmd *exec.Cmd, programState *ProgramState, errorHandler func(*exec.Cmd, error) error) {
 
-	stdout, err := ioutil.ReadAll(stdoutPipe)
+	programState.StderrNonBlocking()
+	programState.StdoutNonBlocking()
+	if err := cmd.Wait(); err != nil {
+		errorHandler(cmd, err)
+	}
+}
+
+func (p *ProgramState) StdoutNonBlocking() ([]byte, error) {
+
+	stdout, err := ioutil.ReadAll(p.stdoutPipe)
 	if err != nil {
 		return p.stdout, err
 	}
@@ -56,12 +70,8 @@ func (p *ProgramState) StdoutNonBlocking() ([]byte, error) {
 }
 
 func (p *ProgramState) StderrNonBlocking() ([]byte, error) {
-	stderrPipe, err := p.Command.StderrPipe()
-	if err != nil {
-		return p.stderr, err
-	}
 
-	stderr, err := ioutil.ReadAll(stderrPipe)
+	stderr, err := ioutil.ReadAll(p.stderrPipe)
 	if err != nil {
 		return p.stdout, err
 	}

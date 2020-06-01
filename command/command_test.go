@@ -3,46 +3,42 @@ package command
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"testing"
 )
 
 func TestExecuteProgram(t *testing.T) {
-	var outstream []byte
-	var errstream []byte
 
-	xephyr := ExternalCommand{
-		path: "Xephyr",
-		arg: []string{
-			":3",
-			"-ac",
-			"-screen",
-			"800x600",
-			"-br",
-			"-reset",
+	cat := ExternalCommand{
+		Path: "cat",
+		Arg: []string{
+			"test_sample.txt",
 		},
-		env: os.Environ(),
+		Env: os.Environ(),
 	}
 
-	xterm := ExternalCommand{
-		path: "xterm",
-		env: append(
-			os.Environ(),
-			"DISPLAY=:3",
-		),
+	programstate, err := ExecuteProgram(cat, testErrorHandler)
+	if err != nil {
+		t.Errorf("Encountered error %s by ExecuteProgram()", err.Error())
+	}
+	out, err := programstate.StdoutNonBlocking()
+	if err != nil {
+		t.Errorf("Encountered error %s by StdoutNonBlocking()", err.Error())
+	}
+	_, err = programstate.StderrNonBlocking()
+	if err != nil {
+		t.Errorf("Encountered error %s by StderrNonBlocking()", err.Error())
 	}
 
-	c := make(chan Status)
-	cx := make(chan Status)
-	go ExecuteProgram(xephyr, outstream, errstream, c)
+	want := "Hello World"
+	got := string(out)
 
-	if i := <-c; i.isRunning {
-		go ExecuteProgram(xterm, outstream, errstream, cx)
-		fmt.Println(string(errstream))
-		fmt.Println(string(outstream))
+	if got != want {
+		t.Errorf("Got text = %q, want %q", got, want)
 	}
+}
 
-	if i := <-cx; i.err != nil {
-		t.Errorf("Test failed %s", i.err.Error())
-	}
-
+func testErrorHandler(cmd *exec.Cmd, err error) error {
+	fmt.Println("Test_error-handler")
+	return err
 }

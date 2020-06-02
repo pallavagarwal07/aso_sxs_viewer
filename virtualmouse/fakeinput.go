@@ -12,19 +12,19 @@ type ConnInfo struct {
 	Setup *xproto.SetupInfo
 }
 
-func EstablishConn() (ConnInfo, error) {
+func EstablishConn() (*ConnInfo, error) {
 	X, err := xgb.NewConnDisplay(":3")
 	if err != nil {
-		return ConnInfo{nil, 0, nil}, err
+		return nil, err
 	}
 	setup := xproto.Setup(X)
 	screen := setup.DefaultScreen(X)
 
 	xtesterr := xtest.Init(X)
 	if xtesterr != nil {
-		return ConnInfo{nil, 0, nil}, xtesterr
+		return nil, xtesterr
 	}
-	return ConnInfo{X, screen.Root, setup}, nil
+	return &ConnInfo{X, screen.Root, setup}, nil
 }
 
 func (c *ConnInfo) Fakeinput(x int16, y int16) error {

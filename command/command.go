@@ -57,19 +57,11 @@ func CloseProgram(programState *ProgramState, errorHandler func(*ProgramState, e
 	waitGroup.Add(1)
 
 	go func() {
-		errStdout := programState.StdoutListner()
-		if errStdout != nil {
-			errorHandler(programState, errStdout)
-			return
-		}
+		programState.StdoutListner()
 		waitGroup.Done()
 	}()
 
-	errStderr := programState.StderrListner()
-	if errStderr != nil {
-		errorHandler(programState, errStderr)
-		return
-	}
+	programState.StderrListner()
 	waitGroup.Wait()
 
 	err := programState.Command.Wait()
@@ -77,31 +69,28 @@ func CloseProgram(programState *ProgramState, errorHandler func(*ProgramState, e
 
 }
 
-func (p *ProgramState) StdoutListner() error {
+func (p *ProgramState) StdoutListner() {
 
-	return Listner(p.stdoutPipe, p.stdout, &p.stdoutmutex)
+	Listner(p.stdoutPipe, &p.stdout, &p.stdoutmutex)
 
 }
 
-func (p *ProgramState) StderrListner() error {
+func (p *ProgramState) StderrListner() {
 
-	return Listner(p.stderrPipe, p.stderr, &p.stderrmutex)
+	Listner(p.stderrPipe, &p.stderr, &p.stderrmutex)
 }
 
-func Listner(pipe io.ReadCloser, buffer []byte, mutex *sync.Mutex) error {
+func Listner(pipe io.ReadCloser, buffer *[]byte, mutex *sync.Mutex) {
 
 	reader := bufio.NewReader(pipe)
 	for {
 
 		buf, err := reader.ReadBytes('\n')
 		mutex.Lock()
-		buffer = append(buffer, buf...)
+		*buffer = append(*buffer, buf...)
 		mutex.Unlock()
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return err
+		if err == io.EOF {
+			break
 		}
 	}
 
@@ -113,14 +102,16 @@ func (p *ProgramState) isRunning() bool {
 
 func (p *ProgramState) Stdout() []byte {
 	p.stdoutmutex.Lock()
-	stdout := p.stdout
+	stdout := make([]byte, len(p.stdout))
+	copy(stdout, p.stdout)
 	p.stdoutmutex.Unlock()
 	return stdout
 }
 
 func (p *ProgramState) Stderr() []byte {
 	p.stderrmutex.Lock()
-	stderr := p.stderr
+	stderr := make([]byte, len(p.stderr))
+	copy(stderr, p.stderr)
 	p.stderrmutex.Unlock()
 	return stderr
 }

@@ -9,7 +9,7 @@ import (
 func TestExecuteProgram(t *testing.T) {
 
 	test := ExternalCommand{
-		Path: "./test_sample_program",
+		Path: "./test_command",
 		Env:  os.Environ(),
 	}
 
@@ -17,14 +17,10 @@ func TestExecuteProgram(t *testing.T) {
 	if err != nil {
 		t.Errorf("Encountered error %s by ExecuteProgram()", err.Error())
 	}
-	out, err := programstate.StdoutNonBlocking()
-	if err != nil {
-		t.Errorf("Encountered error %s by StdoutNonBlocking()", err.Error())
-	}
-	serr, err := programstate.StderrNonBlocking()
-	if err != nil {
-		t.Errorf("Encountered error %s by StderrNonBlocking()", err.Error())
-	} else if len(serr) != 0 {
+	out := programstate.Stdout()
+
+	serr := programstate.Stderr()
+	if len(serr) != 0 {
 		fmt.Println("Returned error by StderrNonBlocking()", string(serr))
 	}
 
@@ -35,16 +31,12 @@ func TestExecuteProgram(t *testing.T) {
 		t.Errorf("Got text = %q, want %q", got, want)
 	}
 
-	//send an interrupt signal to blocked binary
 	err = programstate.Command.Process.Signal(os.Interrupt)
 	if err != nil {
 		t.Errorf("Encountered error %s while sending interrupt signal", err.Error())
 	}
 
-	out, err = programstate.StdoutNonBlocking()
-	if err != nil {
-		t.Errorf("Encountered error %s by StdoutNonBlocking()", err.Error())
-	}
+	out = programstate.Stdout()
 
 	want = "Hello\nWorld"
 	got = string(out)

@@ -1,8 +1,11 @@
 package command
 
 import (
+	"bufio"
 	"io"
+	"os"
 	"os/exec"
+	"sync"
 )
 
 // ExternalCommand has the properties for invoking exec.Command
@@ -13,11 +16,13 @@ type ExternalCommand struct {
 }
 
 type ProgramState struct {
-	Command    *exec.Cmd
-	stdoutPipe io.ReadCloser
-	stderrPipe io.ReadCloser
-	stdout     []byte
-	stderr     []byte
+	Command     *exec.Cmd
+	stdoutPipe  io.ReadCloser
+	stderrPipe  io.ReadCloser
+	stdout      []byte
+	stderr      []byte
+	stdoutmutex sync.Mutex
+	stderrmutex sync.Mutex
 }
 
 // ExecuteProgram invokes an external program
@@ -25,7 +30,7 @@ func ExecuteProgram(command ExternalCommand, errorHandler func(*ProgramState, er
 	var err error
 	programState := &ProgramState{}
 	cmd := exec.Command(command.Path, command.Arg...)
-	cmd.Env = command.Env
+	cmd.Env = append(os.Environ(), command.Env...)
 	programState.Command = cmd
 
 	programState.stdoutPipe, err = cmd.StdoutPipe()
@@ -48,45 +53,74 @@ func ExecuteProgram(command ExternalCommand, errorHandler func(*ProgramState, er
 
 func CloseProgram(programState *ProgramState, errorHandler func(*ProgramState, error) error) {
 
-	_, err := programState.StderrNonBlocking()
-	if err != nil {
-		errorHandler(programState, err)
-		return
-	}
-	_, err = programState.StdoutNonBlocking()
-	if err != nil {
-		errorHandler(programState, err)
-		return
-	}
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
 
-	err = programState.Command.Wait()
+	go func() {
+		errStdout := programState.StdoutListner()
+		if errStdout != nil {
+			errorHandler(programState, errStdout)
+			return
+		}
+		waitGroup.Done()
+	}()
+
+	errStderr := programState.StderrListner()
+	if errStderr != nil {
+		errorHandler(programState, errStderr)
+		return
+	}
+	waitGroup.Wait()
+
+	err := programState.Command.Wait()
 	errorHandler(programState, err)
 
 }
 
-func (p *ProgramState) StdoutNonBlocking() ([]byte, error) {
+func (p *ProgramState) StdoutListner() error {
 
-	return NonBlockingCall(p.stdoutPipe, p.stdout)
+	return Listner(p.stdoutPipe, p.stdout, &p.stdoutmutex)
 
 }
 
-func (p *ProgramState) StderrNonBlocking() ([]byte, error) {
+func (p *ProgramState) StderrListner() error {
 
-	return NonBlockingCall(p.stderrPipe, p.stderr)
+	return Listner(p.stderrPipe, p.stderr, &p.stderrmutex)
 }
 
-func NonBlockingCall(pipe io.ReadCloser, buffer []byte) ([]byte, error) {
+func Listner(pipe io.ReadCloser, buffer []byte, mutex *sync.Mutex) error {
 
-	var output []byte
-	n, err := pipe.Read(output)
-	if n > 0 && err == nil {
-		buffer = append(buffer, output[:n]...)
-	} else if n == 0 && err == io.EOF {
-		err = nil
+	reader := bufio.NewReader(pipe)
+	for {
+
+		buf, err := reader.ReadBytes('\n')
+		mutex.Lock()
+		buffer = append(buffer, buf...)
+		mutex.Unlock()
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			return err
+		}
 	}
-	return buffer, err
+
 }
 
 func (p *ProgramState) isRunning() bool {
 	return !p.Command.ProcessState.Exited()
+}
+
+func (p *ProgramState) Stdout() []byte {
+	p.stdoutmutex.Lock()
+	stdout := p.stdout
+	p.stdoutmutex.Unlock()
+	return stdout
+}
+
+func (p *ProgramState) Stderr() []byte {
+	p.stderrmutex.Lock()
+	stderr := p.stderr
+	p.stderrmutex.Unlock()
+	return stderr
 }

@@ -26,7 +26,7 @@ func EstablishConn(display string) (*ConnInfo, error) {
 	return &ConnInfo{X, screen.Root, setup}, nil
 }
 
-func (c *ConnInfo) Fakeinput(x int16, y int16) error {
+func (c *ConnInfo) MoveMouse(x int16, y int16) error {
 	a := xtest.FakeInputChecked(c.Conn, 6, 0, 0, c.Wid, x, y, 0)
 	if err := a.Check(); err != nil {
 		return err

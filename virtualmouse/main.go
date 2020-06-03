@@ -12,7 +12,7 @@ func main() {
 	for {
 		fmt.Println("enter x and y coordinates of cursor:")
 		fmt.Scan(&x, &y)
-		err = c.Fakeinput(x, y)
+		err = c.MoveMouse(x, y)
 		if err != nil {
 			fmt.Println(err)
 			return

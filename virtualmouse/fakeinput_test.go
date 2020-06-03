@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestFakeInput(t *testing.T) {
+func TestMoveMouse(t *testing.T) {
 	a, err := EstablishConn(":3")
 	if err != nil {
 		t.Errorf("Encountered error %s by EstablishConn()", err)
@@ -25,8 +25,8 @@ func TestFakeInput(t *testing.T) {
 
 		t.Run(testname, func(t *testing.T) {
 
-			if errInput := a.Fakeinput(table.x, table.y); errInput != nil {
-				t.Errorf("Encountered error %s by Fakeinput()", errInput)
+			if errInput := a.MoveMouse(table.x, table.y); errInput != nil {
+				t.Errorf("Encountered error %s by MoveMouse()", errInput)
 			}
 			p, q, errPointer := a.GetPointer()
 			if errPointer != nil {
@@ -34,7 +34,7 @@ func TestFakeInput(t *testing.T) {
 			}
 
 			if table.x != p || table.y != q {
-				t.Errorf("Fakeinput(%v, %v) moves cursor to (%v , %v) , want (%v , %v)", table.x,
+				t.Errorf("MoveMouse(%v, %v) moves cursor to (%v , %v) , want (%v , %v)", table.x,
 					table.y, p, q, table.x, table.y)
 			}
 		})

@@ -6,7 +6,7 @@ import (
 )
 
 func TestFakeInput(t *testing.T) {
-	a, err := EstablishConn()
+	a, err := EstablishConn(":3")
 	if err != nil {
 		t.Errorf("Encountered error %s by EstablishConn()", err)
 	}
@@ -25,8 +25,7 @@ func TestFakeInput(t *testing.T) {
 
 		t.Run(testname, func(t *testing.T) {
 
-			errInput := a.Fakeinput(table.x, table.y)
-			if errInput != nil {
+			if errInput := a.Fakeinput(table.x, table.y); errInput != nil {
 				t.Errorf("Encountered error %s by Fakeinput()", errInput)
 			}
 			p, q, errPointer := a.GetPointer()

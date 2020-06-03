@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-	c, err := EstablishConn()
+	c, err := EstablishConn(":3")
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -5,12 +5,19 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 )
 
 func TestExecuteProgram(t *testing.T) {
 
+	runfilePath := "command/tests/tests_/tests"
+	testSampleCodePath, err := bazel.Runfile(runfilePath)
+	if err != nil {
+		t.Errorf("Encountered error %s by bazel.Runfile with arg %s", err.Error(), runfilePath)
+	}
 	test := ExternalCommand{
-		Path: "./test_command/test_sample_program",
+		Path: testSampleCodePath,
 		Env:  os.Environ(),
 	}
 

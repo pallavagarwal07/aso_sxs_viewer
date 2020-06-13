@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"aso_sxs_viewer/command"
@@ -10,8 +11,12 @@ import (
 	"github.com/BurntSushi/xgb/xproto"
 )
 
-/*this needs to be fixed*/
+var programstate, programstate2 *command.ProgramState
+
 func cmdErrorHandler(p *command.ProgramState, err error) error {
+	programstate.Command.Process.Kill()
+	programstate2.Command.Process.Kill()
+	log.Fatal("connection interrupted")
 	return err
 }
 
@@ -34,10 +39,11 @@ func main() {
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		Arg:  []string{"--window-position=0,0", "--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
+		Arg: []string{"--window-position=0,0",
+			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
 	}
 
-	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
+	programstate, err = command.ExecuteProgram(cmd, cmdErrorHandler)
 
 	if err != nil {
 		fmt.Println(err)
@@ -45,14 +51,17 @@ func main() {
 
 	cmd2 := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		Arg:  []string{"--user-data-dir=/Users/aditibhattacharya/chrome-dev-profile", "--window-position=" + strconv.Itoa(w) + ",0", "--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
+		Arg: []string{"--user-data-dir=/Users/aditibhattacharya/chrome-dev-profile",
+			"--window-position=" + strconv.Itoa(w) + ",0",
+			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
 	}
-	programstate2, err2 := command.ExecuteProgram(cmd2, cmdErrorHandler)
 
-	if err2 != nil {
-		fmt.Println(err2)
+	programstate2, err = command.ExecuteProgram(cmd2, cmdErrorHandler)
+
+	if err != nil {
+		fmt.Println(err)
 	}
-	
+
 	command.CloseProgram(programstate2, cmdErrorHandler)
 	command.CloseProgram(programstate, cmdErrorHandler)
 

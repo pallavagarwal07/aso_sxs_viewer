@@ -29,13 +29,13 @@ func TestChromeTool(t *testing.T) {
 		t.Errorf("Encountered error %s in Run()", err.Error())
 	}
 
-	want := "textarea2test2"
+	want := "textarea1test1"
 	got := val1
 	if got != want {
 		t.Errorf("Got text = %q, want %q", got, want)
 	}
 
-	want = "Click button 2"
+	want = "Click button 1"
 	got = val2
 	if got != want {
 		t.Errorf("Got text = %q, want %q", got, want)
@@ -46,10 +46,11 @@ func TestChromeTool(t *testing.T) {
 func sendActions(host string, val1, val2 *string) chromedp.Tasks {
 	return chromedp.Tasks{
 		chromedp.Navigate(host),
-		SendKeysToNthElement(`.keystext`, 2, "test2"),
-		chromedp.Value(`#testarea2`, val1, chromedp.ByID),
-		ClickNthElement(`clicktest`, 2, chromedp.ByQueryAll),
-		chromedp.Value(`#p2`, val2, chromedp.ByID),
+		ClickNthElement(`.keystest`, 1, chromedp.ByQueryAll),
+		SendKeysToNthElement(`.keystest`, 1, "test1"),
+		chromedp.Value(`#textarea1`, val1, chromedp.ByID),
+		ClickNthElement(`.clicktest`, 1, chromedp.ByQueryAll),
+		chromedp.InnerHTML(`#p2`, val2, chromedp.ByID),
 	}
 }
 
@@ -70,18 +71,22 @@ const indexHTML = `<!doctype html>
 <body>
   <div id="box1">   
     <p id="p1">
+	  <textarea id="textarea0" class="keystest" style="width:500px;height:400px">textarea0</textarea><br><br>
 	  <textarea id="textarea1" class="keystest" style="width:500px;height:400px">textarea1</textarea><br><br>
 	  <textarea id="textarea2" class="keystest" style="width:500px;height:400px">textarea2</textarea><br><br>
-	  <textarea id="textarea3" class="keystest" style="width:500px;height:400px">textarea3</textarea><br><br>
     </p>
   </div>
-  <div id="box2"
-  	<p id='p2'>para2</p> 
+  <div id="box2">
+  	<p id="p2">para2</p> 
+	  <input type='button' class="clicktest" onclick='changeText0()' value='Change Text 0'/>
 	  <input type='button' class="clicktest" onclick='changeText1()' value='Change Text 1'/>
 	  <input type='button' class="clicktest" onclick='changeText2()' value='Change Text 2'/>
-	  <input type='button' class="clicktest" onclick='changeText3()' value='Change Text 3'/>
   </div>
 <script>
+function changeText0()
+{
+ document.getElementById('p2').innerHTML = 'Click button 0';
+}
 function changeText1()
 {
  document.getElementById('p2').innerHTML = 'Click button 1';
@@ -89,10 +94,6 @@ function changeText1()
 function changeText2()
 {
  document.getElementById('p2').innerHTML = 'Click button 2';
-}
-function changeText3()
-{
- document.getElementById('p2').innerHTML = 'Click button 3';
 }
 </script>
 </body>

@@ -1,4 +1,5 @@
 workspace(name = "aso_sxs_viewer")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
@@ -26,6 +27,7 @@ go_rules_dependencies()
 go_register_toolchains()
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 
 gazelle_dependencies()
 
@@ -33,4 +35,60 @@ go_repository(
     name = "com_github_golang_protobuf",
     importpath = "github.com/golang/protobuf",
     tag = "v1.4.2",
+)
+
+go_repository(
+    name = "com_github_chromedp_cdproto",
+    importpath = "github.com/chromedp/cdproto",
+    sum = "h1:qM1xzKK8kc93zKPkxK4iqtjksqDDrU6g9wGnr30jyLo=",
+    version = "v0.0.0-20200608134039-8a80cdaf865c",
+)
+
+go_repository(
+    name = "com_github_chromedp_chromedp",
+    importpath = "github.com/chromedp/chromedp",
+    sum = "h1:F9LafxmYpsQhWQBdCs+6Sret1zzeeFyHS5LkRF//Ffg=",
+    version = "v0.5.3",
+)
+
+go_repository(
+    name = "com_github_knq_sysutil",
+    importpath = "github.com/knq/sysutil",
+    sum = "h1:V0an7KRw92wmJysvFvtqtKMAPmvS5O0jtB0nYo6t+gs=",
+    version = "v0.0.0-20191005231841-15668db23d08",
+)
+
+go_repository(
+    name = "com_github_gobwas_ws",
+    importpath = "github.com/gobwas/ws",
+    sum = "h1:ZOigqf7iBxkA4jdQ3am7ATzdlOFp9YzA6NmuvEEZc9g=",
+    version = "v1.0.3",
+)
+
+go_repository(
+    name = "com_github_mailru_easyjson",
+    importpath = "github.com/mailru/easyjson",
+    sum = "h1:mdxE1MF9o53iCb2Ghj1VfWvh7ZOwHpnVG/xwXrV90U8=",
+    version = "v0.7.1",
+)
+
+go_repository(
+    name = "com_github_gobwas_pool",
+    importpath = "github.com/gobwas/pool",
+    sum = "h1:QEmUOlnSjWtnpRGHF3SauEiOsy82Cup83Vf2LcMlnc8=",
+    version = "v0.2.0",
+)
+
+go_repository(
+    name = "com_github_gobwas_httphead",
+    importpath = "github.com/gobwas/httphead",
+    sum = "h1:s+21KNqlpePfkah2I+gwHF8xmJWRjooY+5248k6m4A0=",
+    version = "v0.0.0-20180130184737-2c6c146eadee",
+)
+
+go_repository(
+    name = "com_github_burntsushi_xgb",
+    importpath = "github.com/burntsushi/xgb",
+    sum = "h1:Gd2CDssqjxDzAoblktIQgLXBSeVsYCwR7l2iQXNJ+Ow=",
+    version = "v0.0.0-20200324125942-20f126ea2843",
 )

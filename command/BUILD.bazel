@@ -12,8 +12,15 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["command_test.go"],
-    data = ["//command/tests"],
+    srcs = [
+        "command_test.go",
+        "websocket_test.go",
+    ],
+    data = [
+        "//command/tests/sample_program_command_test",
+        "//command/tests/sample_program_websocket_test",
+        "//command/tests/sample_program_websocket_test_inf",
+    ],
     embed = [":go_default_library"],
     deps = ["@io_bazel_rules_go//go/tools/bazel:go_default_library"],
 )

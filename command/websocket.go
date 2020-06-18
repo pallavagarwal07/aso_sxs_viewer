@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"time"
 )
@@ -49,8 +48,6 @@ func PollwsURL(programState *ProgramState) (string, error) {
 		bufReader := bufio.NewReader(bytesReader)
 
 		line, err := bufReader.ReadBytes('\n')
-
-		fmt.Println("printing a line")
 
 		if err == io.EOF {
 			err = nil

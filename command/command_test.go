@@ -2,8 +2,11 @@ package command
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"os"
 	"testing"
+
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -11,8 +14,9 @@ import (
 
 func TestExecuteProgram(t *testing.T) {
 
-	runfilePath := "command/tests/tests_/tests"
+	runfilePath := "command/tests/sample_program_command_test/sample_program_command_test_/sample_program_command_test"
 	testSampleCodePath, err := bazel.Runfile(runfilePath)
+
 	if err != nil {
 		t.Errorf("Encountered error %s by bazel.Runfile with arg %s", err.Error(), runfilePath)
 	}
@@ -50,8 +54,11 @@ func TestExecuteProgram(t *testing.T) {
 }
 
 func testErrorHandler(p *ProgramState, err error) error {
-	t.Errorf("Invoked testErrorHandler with error %s", err.Error())
-	return err
+	if err != nil {
+		log.Fatalln("Invoked testErrorHandler with error %s", err.Error())
+		return fmt.Errorf("Invoked testErrorHandler with error %s", err.Error())
+	}
+	return nil
 }
 
 func testWaitOutput(getter func() []byte, want string) error {

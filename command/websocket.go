@@ -12,8 +12,8 @@ import (
 // Chrome will sometimes fail to print the websocket, or run for a long
 // time, without properly exiting. To avoid blocking forever in those
 // cases, give up after ten seconds.
-func WsURL(programState *ProgramState) (string, error) {
-	const wsURLReadTimeout = 10 * time.Second
+func WsURL(programState *ProgramState, timeout int) (string, error) {
+	wsURLReadTimeout := time.Duration(timeout) * time.Second
 	var err error
 
 	var wsURL string

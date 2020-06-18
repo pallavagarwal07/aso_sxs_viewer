@@ -9,6 +9,9 @@ import (
 
 func TestWsURL(t *testing.T) {
 
+	//wsURL timeout in seconds
+	timeout := 1
+
 	runfilePath := "command/testdata/mock_chrome/mock_chrome_/mock_chrome"
 	testSampleCodePath, err := bazel.Runfile(runfilePath)
 	if err != nil {
@@ -26,7 +29,7 @@ func TestWsURL(t *testing.T) {
 	}
 
 	want := "ws://127.0.0.1:9222/devtools/browser/ce8f8213-2323-4a88-9924-6b15247213e1"
-	got, err := WsURL(programstate)
+	got, err := WsURL(programstate, timeout)
 	if err != nil {
 		t.Errorf("Encountered error %s in WsURL()", err.Error())
 	}
@@ -50,7 +53,7 @@ func TestWsURL(t *testing.T) {
 		t.Errorf("Encountered error %s by ExecuteProgram()", err.Error())
 	}
 
-	if _, err := WsURL(programstate); err.Error() != "websocket url timeout reached" {
+	if _, err := WsURL(programstate, timeout); err.Error() != "websocket url timeout reached" {
 		t.Errorf("Unexpected behavior in case when ws:// does not exist")
 	}
 

@@ -14,7 +14,7 @@ import (
 
 func TestExecuteProgram(t *testing.T) {
 
-	runfilePath := "command/tests/sample_program_command_test/sample_program_command_test_/sample_program_command_test"
+	runfilePath := "command/testdata/ack_signal/ack_signal_/ack_signal"
 	testSampleCodePath, err := bazel.Runfile(runfilePath)
 
 	if err != nil {

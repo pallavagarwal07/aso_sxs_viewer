@@ -17,9 +17,9 @@ go_test(
         "websocket_test.go",
     ],
     data = [
-        "//command/tests/sample_program_command_test",
-        "//command/tests/sample_program_websocket_test",
-        "//command/tests/sample_program_websocket_test_inf",
+        "//command/testdata/ack_signal",
+        "//command/testdata/mock_chrome",
+        "//command/testdata/infinite_loop",
     ],
     embed = [":go_default_library"],
     deps = ["@io_bazel_rules_go//go/tools/bazel:go_default_library"],

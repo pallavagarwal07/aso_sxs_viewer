@@ -9,7 +9,7 @@ import (
 
 func TestWsURL(t *testing.T) {
 
-	runfilePath := "command/tests/sample_program_websocket_test/sample_program_websocket_test_/sample_program_websocket_test"
+	runfilePath := "command/testdata/mock_chrome/mock_chrome_/mock_chrome"
 	testSampleCodePath, err := bazel.Runfile(runfilePath)
 	if err != nil {
 		t.Errorf("Encountered error %s by bazel.Runfile with arg %s", err.Error(), runfilePath)
@@ -35,7 +35,7 @@ func TestWsURL(t *testing.T) {
 	}
 
 	//test for err in case ws:// does not exist
-	runfilePath = "command/tests/sample_program_websocket_test_inf/sample_program_websocket_test_inf_/sample_program_websocket_test_inf"
+	runfilePath = "command/testdata/infinite_loop/infinite_loop_/infinite_loop"
 	testSampleCodePath, err = bazel.Runfile(runfilePath)
 	if err != nil {
 		t.Errorf("Encountered error %s by bazel.Runfile with arg %s", err.Error(), runfilePath)

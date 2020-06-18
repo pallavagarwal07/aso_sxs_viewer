@@ -19,7 +19,4 @@ func main() {
 	fmt.Fprintln(os.Stderr, "[11968:12052:0618/141554.061073:ERROR:gbm_wrapper.cc(271)] Failed to export buffer to dma_buf: No such file or directory (2)")
 	fmt.Fprintln(os.Stderr, "[11968:12052:0618/141554.061693:ERROR:gbm_wrapper.cc(271)] Failed to export buffer to dma_buf: No such file or directory (2)")
 	fmt.Fprintln(os.Stderr, "[11968:12052:0618/141554.062239:ERROR:gbm_wrapper.cc(271)] Failed to export buffer to dma_buf: No such file or directory (2)")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "")
 }

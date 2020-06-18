@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"strconv"
 
+	"sync"
+
 	"aso_sxs_viewer/command"
 
-	"github.com/BurntSushi/xgb"
-	"github.com/BurntSushi/xgb/xproto"
+	"github.com/jezek/xgb"
+	"github.com/jezek/xgb/xproto"
 )
 
-var programstate, programstate2 *command.ProgramState
+var wg sync.WaitGroup
 
 //Close has method quit that closes that window and kills that program
 type Close interface {
@@ -19,8 +21,9 @@ type Close interface {
 
 //XquartzWindow is
 type XquartzWindow struct {
-	Wid  xproto.Window
-	Conn *xgb.Conn
+	Wid    xproto.Window
+	Conn   *xgb.Conn
+	IsOpen bool
 }
 
 //ChromeWindow is
@@ -35,22 +38,43 @@ func (p ChromeWindow) Quit() {
 
 //Quit method to close the Xquartz window
 func (p XquartzWindow) Quit() {
-	xproto.DestroyWindow(p.Conn, p.Wid)
+	p.Conn.Close()
 }
 
-//this has to be changed
+//this has to be changed: need to pass two programstates and XQuartzwindow to this 
 func cmdErrorHandler(p *command.ProgramState, err error) error {
-	programstate.Command.Process.Kill()
-	programstate2.Command.Process.Kill()
-
-	//including this line will quit all 3 windows (2 chrome and one Xquartz) the moment any of the browser sessions are quitted
-	//log.Fatal("connection interrupted")
-
+	//programstate.Command.Process.Kill()
+	//programstate2.Command.Process.Kill()
 	return err
 }
 
 //ForceQuit closes everything in case of any error
-func ForceQuit() {
+func ForceQuit(p []*command.ProgramState, w XquartzWindow) {
+	var mutex = &sync.Mutex{}
+
+	mutex.Lock()
+	fmt.Println("starting force quit")
+
+	//if programstate.IsRunning() == true {
+
+	p1 := ChromeWindow{p[0]}
+	p1.Quit()
+	fmt.Println("first chrome quit")
+	//}
+
+	//if programstate2.IsRunning() == true {
+
+	p2 := ChromeWindow{p[1]}
+	p2.Quit()
+	fmt.Println("second chrome quit")
+	//}
+
+	if w.IsOpen == true {
+		w.Quit()
+		fmt.Println("window quit")
+	}
+
+	mutex.Unlock()
 
 }
 
@@ -66,14 +90,13 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
 }
 
 //Openbrowsersessions opens two Chrome browser sessions side-by-side
-func Openbrowsersessions(X *xgb.Conn, screenInfo *xproto.ScreenInfo) {
+func Openbrowsersessions(X *xgb.Conn, screenInfo *xproto.ScreenInfo, programstateslice chan []*command.ProgramState) {
+
 	heightScreen := screenInfo.HeightInPixels
 	widthScreen := screenInfo.WidthInPixels
 
 	h := int(heightScreen - 150)
 	w := int(widthScreen / 2)
-
-	fmt.Println(heightScreen, widthScreen)
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -82,7 +105,7 @@ func Openbrowsersessions(X *xgb.Conn, screenInfo *xproto.ScreenInfo) {
 	}
 
 	var err error
-	programstate, err = command.ExecuteProgram(cmd, cmdErrorHandler)
+	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
 
 	if err != nil {
 		fmt.Println(err)
@@ -95,18 +118,24 @@ func Openbrowsersessions(X *xgb.Conn, screenInfo *xproto.ScreenInfo) {
 			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
 	}
 
-	programstate2, err = command.ExecuteProgram(cmd2, cmdErrorHandler)
+	programstate2, err := command.ExecuteProgram(cmd2, cmdErrorHandler)
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
+	p := []*command.ProgramState{programstate, programstate2}
+	programstateslice <- p
+
+	wg.Done()
+
 	command.CloseProgram(programstate2, cmdErrorHandler)
 	command.CloseProgram(programstate, cmdErrorHandler)
+
 }
 
 //Createinputwindow creates window to caprure keycodes
-func Createinputwindow(X *xgb.Conn, screenInfo *xproto.ScreenInfo) {
+func Createinputwindow(X *xgb.Conn, screenInfo *xproto.ScreenInfo) XquartzWindow {
 
 	heightScreen := screenInfo.HeightInPixels
 	widthScreen := screenInfo.WidthInPixels
@@ -129,30 +158,40 @@ func Createinputwindow(X *xgb.Conn, screenInfo *xproto.ScreenInfo) {
 		[]uint32{
 			0, h,
 		})
+	return XquartzWindow{wid, X, true}
 }
 
 //Capturekeys returns keycodes
-func Capturekeys(X *xgb.Conn) {
+func Capturekeys(X *xgb.Conn, p []*command.ProgramState, w XquartzWindow) {
+	for {
+		ev, err := X.WaitForEvent()
 
-	ev, err := X.WaitForEvent()
-
-	if ev.Bytes()[0] == 2 {
-		fmt.Println("yes, keypress or keyrelease, keycode:")
+		if ev != nil && ev.Bytes()[0] == 2 {
+			fmt.Println("yes, keypress or keyrelease, keycode:")
+			fmt.Println(ev.Bytes()[1]) //prints the keycode.
+		}
+		if err == nil && ev == nil {
+			fmt.Println("connection interrupted")
+			w.IsOpen = false
+			ForceQuit(p, w)
+			return
+		}
 	}
-	fmt.Println(ev.Bytes()[1]) //prints the keycode.
-
-	//this isn't doing anything atm
-	/*if err == nil && ev==nil {
-	fmt.Println("connection interrupted")
-	ForceQuit()*/
 }
 
 func main() {
 	X, screenInfo := Newconn()
-	go Openbrowsersessions(X, screenInfo)
+
+	programstateslice := make(chan []*command.ProgramState)
+	wg.Add(1)
+
+	go Openbrowsersessions(X, screenInfo, programstateslice)
+
+	p := <-programstateslice
+	wg.Wait()
+	close(programstateslice)
+
 	X2, screenInfo := Newconn()
-	Createinputwindow(X2, screenInfo)
-	for {
-		Capturekeys(X2)
-	}
+	w := Createinputwindow(X2, screenInfo)
+	Capturekeys(X2, p, w)
 }

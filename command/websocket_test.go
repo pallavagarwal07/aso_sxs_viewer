@@ -8,7 +8,6 @@ import (
 )
 
 func TestWsURL(t *testing.T) {
-
 	//wsURL timeout in seconds
 	timeout := 1
 
@@ -56,5 +55,4 @@ func TestWsURL(t *testing.T) {
 	if _, err := WsURL(programstate, timeout); err.Error() != "websocket url timeout reached" {
 		t.Errorf("Unexpected behavior in case when ws:// does not exist")
 	}
-
 }

@@ -31,9 +31,7 @@ func WsURL(programState *ProgramState, timeout int) (string, error) {
 	if err != nil {
 		return wsURL, err
 	}
-
 	return wsURL, err
-
 }
 
 //PollwsURL retrives the wsURL from the Stderr of the process
@@ -65,6 +63,5 @@ func PollwsURL(programState *ProgramState) (string, error) {
 		}
 		count += len(line)
 	}
-
 	return wsURL, nil
 }

@@ -2,13 +2,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["test_sample_program.go"],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/command/tests",
+    srcs = ["main.go"],
+    importpath = "github.com/googleinterns/aso_sxs_viewer/command/testdata/ack_signal",
     visibility = ["//visibility:private"],
 )
 
 go_binary(
-    name = "tests",
+    name = "ack_signal",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )

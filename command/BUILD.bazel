@@ -2,15 +2,25 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["command.go"],
+    srcs = [
+        "command.go",
+        "websocket.go",
+    ],
     importpath = "github.com/googleinterns/aso_sxs_viewer/command",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["command_test.go"],
+    srcs = [
+        "command_test.go",
+        "websocket_test.go",
+    ],
+    data = [
+        "//command/testdata/ack_signal",
+        "//command/testdata/mock_chrome",
+        "//command/testdata/infinite_loop",
+    ],
     embed = [":go_default_library"],
-    data = ["//command/tests"],
     deps = ["@io_bazel_rules_go//go/tools/bazel:go_default_library"],
 )

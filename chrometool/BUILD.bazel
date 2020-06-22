@@ -15,6 +15,11 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["chrometool_test.go"],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
-    deps = ["@com_github_chromedp_chromedp//:go_default_library"],
+    deps = [
+        "@com_github_chromedp_chromedp//:go_default_library",
+        "@com_github_gobwas_ws//:go_default_library",
+        "@com_github_gobwas_ws//wsutil:go_default_library",
+    ],
 )

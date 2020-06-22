@@ -12,21 +12,20 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-var wg sync.WaitGroup
-
 //Close has method quit that closes that window and kills that program
-type Close interface {
+type Quitters interface {
 	Quit()
+	ToClose() bool
 }
 
-//XquartzWindow is
+//XquartzWindow is struct to hold information about the input window
 type XquartzWindow struct {
 	Wid    xproto.Window
 	Conn   *xgb.Conn
 	IsOpen bool
 }
 
-//ChromeWindow is
+//ChromeWindow is struct to hold information about Chrome browser sessions
 type ChromeWindow struct {
 	*command.ProgramState
 }
@@ -36,46 +35,43 @@ func (p ChromeWindow) Quit() {
 	p.Command.Process.Kill()
 }
 
-//Quit method to close the Xquartz window
+//ToClose method checks whether ChromeWindow needs to be closed
+func (p ChromeWindow) ToClose() bool {
+	return !p.Command.ProcessState.Exited()
+}
+
+//Quit method to close the Xquartz (input) window
 func (p XquartzWindow) Quit() {
 	p.Conn.Close()
 }
 
-//this has to be changed: need to pass two programstates and XQuartzwindow to this 
+//ToClose method checks whether XquartzWindow needs to be closed
+func (p XquartzWindow) ToClose() bool {
+	return p.IsOpen
+}
+
+/*this has to be omitted*/
 func cmdErrorHandler(p *command.ProgramState, err error) error {
-	//programstate.Command.Process.Kill()
-	//programstate2.Command.Process.Kill()
 	return err
 }
 
 //ForceQuit closes everything in case of any error
-func ForceQuit(p []*command.ProgramState, w XquartzWindow) {
+func ForceQuit(quitters *[]Quitters) {
 	var mutex = &sync.Mutex{}
 
 	mutex.Lock()
 	fmt.Println("starting force quit")
 
-	//if programstate.IsRunning() == true {
-
-	p1 := ChromeWindow{p[0]}
-	p1.Quit()
-	fmt.Println("first chrome quit")
-	//}
-
-	//if programstate2.IsRunning() == true {
-
-	p2 := ChromeWindow{p[1]}
-	p2.Quit()
-	fmt.Println("second chrome quit")
-	//}
-
-	if w.IsOpen == true {
-		w.Quit()
-		fmt.Println("window quit")
+	if (*quitters)[len(*quitters)-1].ToClose() == true {
+		(*quitters)[len(*quitters)-1].Quit()
 	}
 
+	for _, q := range (*quitters)[:len(*quitters)-1] {
+		if q.ToClose() == true {
+			q.Quit()
+		}
+	}
 	mutex.Unlock()
-
 }
 
 //Newconn establishes connection with XQuartz
@@ -90,61 +86,38 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
 }
 
 //Openbrowsersessions opens two Chrome browser sessions side-by-side
-func Openbrowsersessions(X *xgb.Conn, screenInfo *xproto.ScreenInfo, programstateslice chan []*command.ProgramState) {
-
-	heightScreen := screenInfo.HeightInPixels
-	widthScreen := screenInfo.WidthInPixels
-
-	h := int(heightScreen - 150)
-	w := int(widthScreen / 2)
+func CreateChromeWindow(x int, y int, w int, h int, s string, myfunc func(a *[]Quitters),
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, quitters *[]Quitters) {
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		Arg: []string{"--window-position=0,0",
+		Arg: []string{"--user-data-dir=" + s,
+			"--window-position=" + strconv.Itoa(x) + "," + strconv.Itoa(y),
 			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
 	}
 
-	var err error
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	cmd2 := command.ExternalCommand{
-		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		Arg: []string{"--user-data-dir=/Users/aditibhattacharya/chrome-dev-profile",
-			"--window-position=" + strconv.Itoa(w) + ",0",
-			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
+	(*quitters) = append(*quitters, ChromeWindow{programstate})
+
+	for {
+		if (*quitters)[0].ToClose() == false {
+			myfunc(quitters)
+		}
 	}
-
-	programstate2, err := command.ExecuteProgram(cmd2, cmdErrorHandler)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	p := []*command.ProgramState{programstate, programstate2}
-	programstateslice <- p
-
-	wg.Done()
-
-	command.CloseProgram(programstate2, cmdErrorHandler)
-	command.CloseProgram(programstate, cmdErrorHandler)
-
 }
 
 //Createinputwindow creates window to caprure keycodes
-func Createinputwindow(X *xgb.Conn, screenInfo *xproto.ScreenInfo) XquartzWindow {
-
-	heightScreen := screenInfo.HeightInPixels
-	widthScreen := screenInfo.WidthInPixels
-
-	h := uint32(heightScreen - 150)
+func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(a *[]Quitters),
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, quitters *[]Quitters) {
 
 	wid, _ := xproto.NewWindowId(X)
 	xproto.CreateWindow(X, screenInfo.RootDepth, wid, screenInfo.Root,
-		0, 0, widthScreen, 50, 0,
+		0, 0, w, h, 0,
 		xproto.WindowClassInputOutput, screenInfo.RootVisual,
 		xproto.CwBackPixel|xproto.CwEventMask,
 		[]uint32{
@@ -156,24 +129,24 @@ func Createinputwindow(X *xgb.Conn, screenInfo *xproto.ScreenInfo) XquartzWindow
 	xproto.ConfigureWindow(X, wid,
 		xproto.ConfigWindowX|xproto.ConfigWindowY,
 		[]uint32{
-			0, h,
+			y, x,
 		})
-	return XquartzWindow{wid, X, true}
-}
 
-//Capturekeys returns keycodes
-func Capturekeys(X *xgb.Conn, p []*command.ProgramState, w XquartzWindow) {
+	(*quitters) = append(*quitters, XquartzWindow{wid, X, true})
+
 	for {
 		ev, err := X.WaitForEvent()
 
 		if ev != nil && ev.Bytes()[0] == 2 {
 			fmt.Println("yes, keypress or keyrelease, keycode:")
-			fmt.Println(ev.Bytes()[1]) //prints the keycode.
+			fmt.Println(ev.Bytes()[1])
 		}
+
 		if err == nil && ev == nil {
 			fmt.Println("connection interrupted")
-			w.IsOpen = false
-			ForceQuit(p, w)
+			//how do i check if the connection has been interrupted if i can't update IsOpen
+			//(*quitters)[len(*quitters)-1].ToClose() = false
+			myfunc(quitters)
 			return
 		}
 	}
@@ -181,17 +154,15 @@ func Capturekeys(X *xgb.Conn, p []*command.ProgramState, w XquartzWindow) {
 
 func main() {
 	X, screenInfo := Newconn()
-
-	programstateslice := make(chan []*command.ProgramState)
-	wg.Add(1)
-
-	go Openbrowsersessions(X, screenInfo, programstateslice)
-
-	p := <-programstateslice
-	wg.Wait()
-	close(programstateslice)
-
 	X2, screenInfo := Newconn()
-	w := Createinputwindow(X2, screenInfo)
-	Capturekeys(X2, p, w)
+
+	var myslice []Quitters
+	var quitters *[]Quitters //pointer to a slice of quitters
+
+	quitters = &myslice
+
+	go CreateChromeWindow(0, 0, 600, 600, "/Users/aditibhattacharya/chrome-dev-profile", ForceQuit, X, screenInfo, quitters)
+
+	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X2, screenInfo, quitters)
+
 }

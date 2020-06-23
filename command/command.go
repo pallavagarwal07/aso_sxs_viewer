@@ -96,7 +96,10 @@ func Listner(pipe io.ReadCloser, buffer *[]byte, mutex *sync.Mutex) {
 
 }
 
-func (p *ProgramState) isRunning() bool {
+func (p *ProgramState) IsRunning() bool {
+	if p.Command.ProcessState == nil {
+		return true
+	}
 	return !p.Command.ProcessState.Exited()
 }
 

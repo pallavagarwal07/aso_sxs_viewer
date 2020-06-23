@@ -43,12 +43,11 @@ func (p ChromeWindow) Quit() {
 
 //ToClose method checks whether ChromeWindow needs to be closed
 func (p ChromeWindow) ToClose() bool {
-	return !p.Command.ProcessState.Exited()
+	return p.IsRunning()
 }
 
 //SetToClose method sets the value of IsRunning
 func (p ChromeWindow) SetToClose(b bool) {
-	//p.IsRunning
 }
 
 //Quit method to close the Xquartz (input) window

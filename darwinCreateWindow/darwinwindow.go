@@ -6,13 +6,13 @@ import (
 
 	"sync"
 
-	"aso_sxs_viewer/command"
+	"../command"
 
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
 )
 
-//Close has method quit that closes that window and kills that program
+//Quitters has method quit that closes that window and kills that program
 type Quitters interface {
 	Quit()
 	ToClose() bool
@@ -26,9 +26,10 @@ type XquartzWindow struct {
 	IsOpen bool
 }
 
+//QuitStruct has the slice of quittes and the lock
 type QuitStruct struct {
-	quitters *[]Quitters
-	mux      sync.Mutex
+	quitters []Quitters
+	lock     sync.Mutex
 }
 
 //ChromeWindow is struct to hold information about Chrome browser sessions
@@ -71,19 +72,19 @@ func cmdErrorHandler(p *command.ProgramState, err error) error {
 }
 
 //ForceQuit closes everything
-func ForceQuit(a QuitStruct) {
+func ForceQuit(a *QuitStruct) {
 
-	a.mux.Lock()
-	defer a.mux.Unlock()
+	a.lock.Lock()
+	defer a.lock.Unlock()
 
 	fmt.Println("starting force quit")
 
-	if (*a.quitters)[len(*a.quitters)-1].ToClose() == true {
-		(*a.quitters)[len(*a.quitters)-1].Quit()
+	if (a.quitters)[len(a.quitters)-1].ToClose() == true {
+		(a.quitters)[len(a.quitters)-1].Quit()
 		fmt.Println("quit Xwindow")
 	}
 
-	for _, q := range (*a.quitters)[:len(*a.quitters)-1] {
+	for _, q := range (a.quitters)[:len(a.quitters)-1] {
 		if q.ToClose() == true {
 			q.Quit() // will be quitting the other open Chrome Windows
 			fmt.Println("quit Chrome window")
@@ -103,15 +104,16 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
 	return X, screenInfo
 }
 
-//Openbrowsersessions opens two Chrome browser sessions side-by-side
-func CreateChromeWindow(x int, y int, w int, h int, s string, myfunc func(QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a QuitStruct) {
+//CreateChromeWindow opens a Chrome browser session
+func CreateChromeWindow(x int, y int, w int, h int, s string, myfunc func(*QuitStruct),
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 		Arg: []string{"--user-data-dir=" + s,
 			"--window-position=" + strconv.Itoa(x) + "," + strconv.Itoa(y),
-			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h)},
+			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h),
+			"--disable-session-crashed-bubble", "--disble-infobars", "--disable-extensions"},
 	}
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
@@ -120,18 +122,20 @@ func CreateChromeWindow(x int, y int, w int, h int, s string, myfunc func(QuitSt
 		fmt.Println(err)
 	}
 
-	(*a.quitters) = append(*a.quitters, ChromeWindow{programstate})
+	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
 
 	for {
-		if (*a.quitters)[0].ToClose() == false {
+		if programstate.IsRunning() == false {
+			fmt.Println("chrome closed- calling force quit")
 			myfunc(a)
+			return
 		}
 	}
 }
 
-//Createinputwindow creates window to caprure keycodes
-func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a QuitStruct) {
+//CreateInputWindow creates window to caprure keycodes
+func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(*QuitStruct),
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
 
 	wid, _ := xproto.NewWindowId(X)
 	xproto.CreateWindow(X, screenInfo.RootDepth, wid, screenInfo.Root,
@@ -150,7 +154,7 @@ func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(QuitS
 			y, x,
 		})
 
-	(*a.quitters) = append(*a.quitters, XquartzWindow{wid, X, true})
+	(a.quitters) = append(a.quitters, XquartzWindow{wid, X, true})
 
 	for {
 		ev, err := X.WaitForEvent()
@@ -162,7 +166,7 @@ func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(QuitS
 
 		if err == nil && ev == nil {
 			fmt.Println("connection interrupted")
-			(*a.quitters)[len(*a.quitters)-1].SetToClose(false)
+			(a.quitters)[len(a.quitters)-1].SetToClose(false)
 			myfunc(a)
 			return
 		}
@@ -173,15 +177,9 @@ func main() {
 	X, screenInfo := Newconn()
 	X2, screenInfo := Newconn()
 
-	var myslice []Quitters
-	var mutex sync.Mutex
-	//var quitters *[]Quitters //pointer to a slice of quitters
+	q := new(QuitStruct)
 
-	var a QuitStruct
-	a.quitters = &myslice
-	a.mux = mutex
-
-	go CreateChromeWindow(0, 0, 600, 600, "/Users/aditibhattacharya/chrome-dev-profile", ForceQuit, X, screenInfo, a)
-	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X2, screenInfo, a)
+	go CreateChromeWindow(0, 0, 600, 600, "/Users/aditibhattacharya/chrome-dev-profile", ForceQuit, X, screenInfo, q)
+	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X2, screenInfo, q)
 
 }

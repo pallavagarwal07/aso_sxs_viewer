@@ -179,7 +179,7 @@ func main() {
 
 	q := new(QuitStruct)
 
-	go CreateChromeWindow(0, 0, 600, 600, "/Users/aditibhattacharya/chrome-dev-profile", ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(0, 0, 600, 600, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
 	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X2, screenInfo, q)
 
 }

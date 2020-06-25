@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 
 	"sync"
 
@@ -93,46 +92,6 @@ func ForceQuit(a *QuitStruct) {
 
 }
 
-//Newconn establishes connection with XQuartz
-func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
-	X, err := xgb.NewConn()
-	if err != nil {
-		fmt.Println(err)
-	}
-	setup := xproto.Setup(X)
-	screenInfo := setup.DefaultScreen(X)
-	return X, screenInfo
-}
-
-//CreateChromeWindow opens a Chrome browser session
-func CreateChromeWindow(x int, y int, w int, h int, s string, myfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
-
-	cmd := command.ExternalCommand{
-		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		Arg: []string{"--user-data-dir=" + s,
-			"--window-position=" + strconv.Itoa(x) + "," + strconv.Itoa(y),
-			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h),
-			"--disable-session-crashed-bubble", "--disble-infobars", "--disable-extensions"},
-	}
-
-	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
-
-	for {
-		if programstate.IsRunning() == false {
-			fmt.Println("chrome closed- calling force quit")
-			myfunc(a)
-			return
-		}
-	}
-}
-
 //CreateInputWindow creates window to caprure keycodes
 func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(*QuitStruct),
 	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
@@ -164,6 +123,14 @@ func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(*Quit
 			fmt.Println(ev)
 		}
 
+		if ev != nil && ev.Bytes()[0] == 18 {
+			fmt.Println("unmap notify event")
+			fmt.Println("connection interrupted")
+			(a.quitters)[len(a.quitters)-1].SetToClose(false)
+			myfunc(a)
+			return
+		}
+
 		if err == nil && ev == nil {
 			fmt.Println("connection interrupted")
 			(a.quitters)[len(a.quitters)-1].SetToClose(false)
@@ -174,12 +141,10 @@ func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(*Quit
 }
 
 func main() {
-	X, screenInfo := Newconn()
-	X2, screenInfo := Newconn()
-
 	q := new(QuitStruct)
+	X, screenInfo := Newconn()
 
 	go CreateChromeWindow(0, 0, 600, 600, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
-	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X2, screenInfo, q)
+	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X, screenInfo, q)
 
 }

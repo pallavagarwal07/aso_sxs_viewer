@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["chrometool.go"],
+    importpath = "github.com/googleinterns/aso_sxs_viewer/chrometool",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_chromedp_cdproto//cdp:go_default_library",
+        "@com_github_chromedp_cdproto//dom:go_default_library",
+        "@com_github_chromedp_chromedp//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["chrometool_test.go"],
+    data = glob(["testdata/**"]),
+    embed = [":go_default_library"],
+    deps = [
+        "@com_github_chromedp_chromedp//:go_default_library",
+        "@com_github_gobwas_ws//:go_default_library",
+        "@com_github_gobwas_ws//wsutil:go_default_library",
+    ],
+)

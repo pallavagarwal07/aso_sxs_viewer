@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 
 	"../command"
@@ -36,15 +38,24 @@ func Newconn(x int, y int, w int, h int, display string, a *QuitStruct) (*xgb.Co
 	}
 	programstate, err := command.ExecuteProgram(xephyr, cmdErrorHandler)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
 
 	// step2: start a connection with Xephyr on that particular display
 	X, err := xgb.NewConnDisplay(display)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
+
+	for {
+		_, err := os.Stat("/tmp/.X11-unix/X3")
+		if !os.IsNotExist(err) {
+			fmt.Println("File exists")
+			break
+		}
+	}
+
 	setup := xproto.Setup(X)
 	screenInfo := setup.DefaultScreen(X)
 	return X, screenInfo
@@ -67,6 +78,9 @@ func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display 
 	}
 
 	programstate, err := command.ExecuteProgram(chromewindow, cmdErrorHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
 
@@ -74,7 +88,7 @@ func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display 
 		ev, err := X.WaitForEvent()
 
 		// Close everything in case Window is closed
-		if ev != nil && ev.Bytes()[0] == 18 {
+		if ev != nil && ev.Bytes()[0] == xproto.UnmapNotify {
 			fmt.Println("unmap notify event")
 			fmt.Println("connection interrupted")
 			(a.quitters)[len(a.quitters)-1].SetToClose(false)

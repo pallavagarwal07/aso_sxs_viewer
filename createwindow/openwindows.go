@@ -80,13 +80,11 @@ func ForceQuit(a *QuitStruct) {
 
 	if (a.quitters)[len(a.quitters)-1].ToClose() == true {
 		(a.quitters)[len(a.quitters)-1].Quit()
-		fmt.Println("quit Xwindow")
 	}
 
 	for _, q := range (a.quitters)[:len(a.quitters)-1] {
 		if q.ToClose() == true {
 			q.Quit() // will be quitting the other open Chrome Windows
-			fmt.Println("quit Chrome window")
 		}
 	}
 

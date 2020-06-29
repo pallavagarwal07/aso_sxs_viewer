@@ -38,7 +38,7 @@ func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, myfunc func(*Quit
 			fmt.Println(ev)
 		}
 
-		if ev != nil && ev.Bytes()[0] == 18 {
+		if ev != nil && ev.Bytes()[0] == xproto.UnmapNotify {
 			fmt.Println("unmap notify event")
 			fmt.Println("connection interrupted")
 			(a.quitters)[len(a.quitters)-1].SetToClose(false)

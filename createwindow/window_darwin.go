@@ -23,9 +23,11 @@ func Setup() {
 //Newconn establishes connection with XQuartz
 func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
 	X, err := xgb.NewConn()
+
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	setup := xproto.Setup(X)
 	screenInfo := setup.DefaultScreen(X)
 	return X, screenInfo

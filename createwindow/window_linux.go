@@ -18,7 +18,7 @@ func Setup() {
 	q := new(QuitStruct)
 	X, screenInfo := Newconn(0, 0, 600, 600, ":3", q)
 
-	go CreateChromeWindow(0, 0, 600, 600, "/tmp/aso_sxs_viewer/dir1", ":3", ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(0, 100, 600, 600, "/tmp/aso_sxs_viewer/dir1", ":3", ForceQuit, X, screenInfo, q)
 	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X, screenInfo, q)
 }
 
@@ -42,18 +42,18 @@ func Newconn(x int, y int, w int, h int, display string, a *QuitStruct) (*xgb.Co
 	}
 	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
 
-	// step2: start a connection with Xephyr on that particular display
-	X, err := xgb.NewConnDisplay(display)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	for {
-		_, err := os.Stat("/tmp/.X11-unix/X3")
+		_, err = os.Stat("/tmp/.X11-unix/X3")
 		if !os.IsNotExist(err) {
 			fmt.Println("File exists")
 			break
 		}
+	}
+
+	// step2: start a connection with Xephyr on that particular display
+	X, err := xgb.NewConnDisplay(display)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	setup := xproto.Setup(X)
@@ -86,6 +86,9 @@ func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display 
 
 	for {
 		ev, err := X.WaitForEvent()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// Close everything in case Window is closed
 		if ev != nil && ev.Bytes()[0] == xproto.UnmapNotify {

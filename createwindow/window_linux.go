@@ -14,7 +14,7 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-//Setup opens all windows and establishes connection with the x server
+// Setup opens all windows and establishes connection with the x server
 func Setup() {
 
 	q := new(QuitStruct)
@@ -26,7 +26,7 @@ func Setup() {
 	CreateInputWindow(0, 0, 1280, 180, ForceQuit, XChild, screenInfoChild, q)
 }
 
-//NewConn opens a Xephyr window on a particular display and connects to it
+// NewConn opens a Xephyr window on a particular display and connects to it
 func Newconn(x int, y int, w int, h int, display string, a *QuitStruct) (*xgb.Conn, *xgb.Conn, *xproto.ScreenInfo, *xproto.ScreenInfo) {
 	// step1: start xephyr on a particular display number with position and size
 	xephyr := command.ExternalCommand{
@@ -125,22 +125,8 @@ func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display 
 
 	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
 
+	// Close everything in case Chrome stops working
 	for {
-		ev, err := X.WaitForEvent()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Close everything in case Window is closed
-		if ev != nil && ev.Bytes()[0] == xproto.UnmapNotify {
-			fmt.Println("unmap notify event")
-			fmt.Println("connection interrupted")
-			(a.quitters)[len(a.quitters)-1].SetToClose(false)
-			myfunc(a)
-			return
-		}
-
-		// Close everything in case Chrome stops working
 		if programstate.IsRunning() == false {
 			fmt.Println("chrome closed- calling force quit")
 			myfunc(a)

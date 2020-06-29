@@ -17,6 +17,7 @@ func Setup() {
 	X, screenInfo := Newconn()
 
 	go CreateChromeWindow(0, 0, 600, 600, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(100, 100, 600, 600, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q)
 	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X, screenInfo, q)
 }
 

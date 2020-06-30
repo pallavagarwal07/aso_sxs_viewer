@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"time"
 
 	"../command"
 	"github.com/jezek/xgb"
@@ -95,6 +96,7 @@ func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display 
 
 	// Close everything in case Chrome stops working
 	for {
+		time.Sleep(10 * time.Millisecond)
 		if programstate.IsRunning() == false {
 			fmt.Println("chrome closed- calling force quit")
 			quitfunc(a)

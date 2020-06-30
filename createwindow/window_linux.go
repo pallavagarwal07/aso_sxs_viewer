@@ -5,9 +5,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
-	"time"
 
 	"../command"
 	"github.com/jezek/xgb"
@@ -18,21 +18,25 @@ import (
 func Setup() {
 
 	q := new(QuitStruct)
-	X, XChild, screenInfo, screenInfoChild := Newconn(0, 0, 1600, 1600, ":3", q)
+	n := 1000 + rand.Intn(9999-1000+1) // the display number
 
-	go CreateChromeWindow(0, 300, 600, 600, "/tmp/aso_sxs_viewer/dir1", ":3", ForceQuit, X, screenInfo, q)
-	go CreateChromeWindow(650, 300, 600, 600, "/tmp/aso_sxs_viewer/dir2", ":3", ForceQuit, X, screenInfo, q)
-	time.Sleep(5 * time.Second)
-	CreateInputWindow(0, 0, 1280, 180, ForceQuit, XChild, screenInfoChild, q)
+	X, screenInfo := Newconn(0, 0, 1600, 1600, n, q)
+
+	go CreateChromeWindow(0, 300, 600, 600, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(650, 300, 600, 600, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
+
+	CreateInputWindow(0, 0, 1280, 180, ForceQuit, X, screenInfo, q)
 }
 
 // NewConn opens a Xephyr window on a particular display and connects to it
-func Newconn(x int, y int, w int, h int, display string, a *QuitStruct) (*xgb.Conn, *xgb.Conn, *xproto.ScreenInfo, *xproto.ScreenInfo) {
+func Newconn(x int, y int, w int, h int, display int, a *QuitStruct) (*xgb.Conn, *xproto.ScreenInfo) {
 	// step1: start xephyr on a particular display number with position and size
+
+	displayString := ":" + strconv.Itoa(display)
 	xephyr := command.ExternalCommand{
 		Path: "Xephyr",
 		Arg: []string{
-			display,
+			displayString,
 			"-ac",
 			"-screen",
 			strconv.Itoa(w) + "x" + strconv.Itoa(h) + "+" + strconv.Itoa(x) + "+" + strconv.Itoa(y),
@@ -47,63 +51,27 @@ func Newconn(x int, y int, w int, h int, display string, a *QuitStruct) (*xgb.Co
 	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
 
 	for {
-		_, err := os.Stat("/tmp/.X11-unix/X3")
+		_, err := os.Stat("/tmp/.X11-unix/X" + strconv.Itoa(display))
 		if !os.IsNotExist(err) {
 			fmt.Println("File exists")
 			break
 		}
 	}
 
-	displayChild := ":4"
-
-	xephyrChild := command.ExternalCommand{
-		Path: "Xephyr",
-		Arg: []string{
-			displayChild,
-			"-ac",
-			"-screen",
-			strconv.Itoa(w) + "x" + strconv.Itoa(200) + "+" + strconv.Itoa(x) + "+" + strconv.Itoa(y),
-			"-br",
-			"-reset",
-		},
-		Env: []string{
-			"DISPLAY=" + display},
-	}
-	programstate, err = command.ExecuteProgram(xephyrChild, cmdErrorHandler)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for {
-		_, err := os.Stat("/tmp/.X11-unix/X4")
-		if !os.IsNotExist(err) {
-			fmt.Println("File exists")
-			break
-		}
-	}
-
-	// step2: start a connection with Xephyr on that particular display
-	X, err := xgb.NewConnDisplay(display)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// step2: start a connection with Xephyr on that particular display
-	XChild, err := xgb.NewConnDisplay(displayChild)
+	// step2: start a connection with parent Xephyr on parent display
+	X, err := xgb.NewConnDisplay(displayString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	setup := xproto.Setup(X)
 	screenInfo := setup.DefaultScreen(X)
-	setupChild := xproto.Setup(XChild)
-	screenInfoChild := setupChild.DefaultScreen(XChild)
 
-	return X, XChild, screenInfo, screenInfoChild
+	return X, screenInfo
 }
 
 // CreateChromeWindow opens chrome browser session in linux
-func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display string, myfunc func(*QuitStruct),
+func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display string, quitfunc func(*QuitStruct),
 	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
 
 	chromewindow := command.ExternalCommand{
@@ -129,7 +97,7 @@ func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, display 
 	for {
 		if programstate.IsRunning() == false {
 			fmt.Println("chrome closed- calling force quit")
-			myfunc(a)
+			quitfunc(a)
 			return
 		}
 	}

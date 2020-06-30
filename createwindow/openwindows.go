@@ -11,6 +11,11 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
+// Layout has the x , y coordinates of top left corner and width and height of window
+type Layout struct {
+	x, y, w, h uint16
+}
+
 //Quitters has method quit that closes that window and kills that program
 type Quitters interface {
 	Quit()

@@ -4,8 +4,6 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"strconv"
 	"time"
 
 	"../command"
@@ -18,43 +16,43 @@ func Setup() {
 	q := new(QuitStruct)
 	X, screenInfo := Newconn()
 
-	go CreateChromeWindow(0, 0, 600, 600, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
-	go CreateChromeWindow(100, 100, 600, 600, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q)
-	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(layout1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(layout2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q)
+	CreateInputWindow(layout3, ForceQuit, X, screenInfo, q)
 }
 
 // Newconn establishes connection with XQuartz
-func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
+func Newconn() (*xgb.Conn, *xproto.ScreenInfo, error) {
 	X, err := xgb.NewConn()
 
 	if err != nil {
-		log.Fatalln(err)
+		return nil, nil, err
 	}
 
 	setup := xproto.Setup(X)
 	screenInfo := setup.DefaultScreen(X)
-	return X, screenInfo
+	return X, screenInfo, nil
 }
 
 // CreateChromeWindow opens a Chrome browser session
-func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, quitfunc func(*QuitStruct),
+func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitStruct),
 	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 		Arg: []string{"--user-data-dir=" + userdatadir,
-			"--window-position=" + strconv.Itoa(x) + "," + strconv.Itoa(y),
-			"--window-size=" + strconv.Itoa(w) + "," + strconv.Itoa(h),
+			fmt.Sprintf("--window-position=%d,%d", layout.x, layout.y),
+			fmt.Sprintf("--window-position=%d,%d", layout.w, layout.h),
 			"--disable-session-crashed-bubble", "--disble-infobars", "--disable-extensions"},
 	}
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
 
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
-	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
+	a.quitters = append(a.quitters, ChromeWindow{programstate})
 
 	for {
 		time.Sleep(10 * time.Millisecond)

@@ -2,53 +2,44 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
 )
 
 //CreateInputWindow creates window to capture keycodes
-func CreateInputWindow(x uint32, y uint32, w uint16, h uint16, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) (*xgb.Conn, xproto.Window) {
+func CreateInputWindow(layout Layout, quitfunc func(*QuitStruct),
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) (*xgb.Conn, xproto.Window, error) {
 
 	wid, _ := xproto.NewWindowId(X)
-	xproto.CreateWindow(X, screenInfo.RootDepth, wid, screenInfo.Root,
-		0, 0, w, h, 0,
+	cookie := xproto.CreateWindowChecked(X, screenInfo.RootDepth, wid, screenInfo.Root,
+		0, 0, layout.w, layout.h, 0,
 		xproto.WindowClassInputOutput, screenInfo.RootVisual,
 		xproto.CwBackPixel|xproto.CwEventMask,
 		[]uint32{
 			0xffffffff,
-			xproto.EventMaskStructureNotify |
+			xproto.EventMaskEnterWindow |
+				xproto.EventMaskLeaveWindow |
 				xproto.EventMaskKeyPress |
-				xproto.EventMaskKeyRelease})
+				xproto.EventMaskKeyRelease |
+				xproto.EventMaskStructureNotify})
+
+	if err := cookie.Check(); err != nil {
+		return nil, 0, err
+	}
+
 	xproto.MapWindow(X, wid)
 	xproto.ConfigureWindow(X, wid,
 		xproto.ConfigWindowX|xproto.ConfigWindowY,
 		[]uint32{
-			y, x,
+			uint32(layout.y), uint32(layout.x),
 		})
-	cookie := xproto.ChangeWindowAttributesChecked(
-		X, wid, xproto.CwEventMask,
-		[]uint32{
-			xproto.EventMaskPointerMotion |
-				xproto.EventMaskButtonPress |
-				xproto.EventMaskButtonRelease |
-				xproto.EventMaskEnterWindow |
-				xproto.EventMaskLeaveWindow |
-				xproto.EventMaskKeyPress |
-				xproto.EventMaskStructureNotify |
-				xproto.EventMaskKeyRelease})
 
-	if err := cookie.Check(); err != nil {
-		log.Fatalln(err)
-	}
-
-	(a.quitters) = append(a.quitters, InputWindow{wid, X, true})
+	a.quitters = append(a.quitters, InputWindow{wid, X, true})
 
 	eventloop(X, wid, a, quitfunc)
 
-	return X, wid
+	return X, wid, nil
 }
 
 func eventloop(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct)) {
@@ -58,7 +49,7 @@ func eventloop(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*Qui
 
 		if err == nil && ev == nil {
 			fmt.Println("connection interrupted")
-			(a.quitters)[len(a.quitters)-1].SetToClose(false)
+			a.quitters[len(a.quitters)-1].SetToClose(false)
 			quitfunc(a)
 			return
 		}
@@ -75,8 +66,6 @@ func eventloop(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*Qui
 			leaveNotifyhandler(X, wid, a, quitfunc, b)
 		case xproto.UnmapNotifyEvent:
 			unmapNotifyhandler(X, wid, a, quitfunc, b)
-			// default:
-			// fmt.Println(a)
 		}
 
 	}
@@ -91,24 +80,26 @@ func keyReleasehandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc f
 	fmt.Println(b.Detail)
 }
 
-func enterNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.EnterNotifyEvent) {
+func enterNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.EnterNotifyEvent) error {
 	cookie := xproto.GrabKeyboard(X, true, wid, xproto.TimeCurrentTime, xproto.GrabModeAsync, xproto.GrabModeAsync)
 	if _, err := cookie.Reply(); err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	// keybinding.Focus = false
+	return nil
 }
 
-func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.LeaveNotifyEvent) {
+func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.LeaveNotifyEvent) error {
 	cookie := xproto.UngrabKeyboardChecked(X, xproto.TimeCurrentTime)
 	if err := cookie.Check(); err != nil {
-		log.Fatalln(err)
+		return err
 	}
+	return nil
 }
 
 func unmapNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.UnmapNotifyEvent) {
 	fmt.Println("unmap notify event")
 	fmt.Println("connection interrupted")
-	(a.quitters)[len(a.quitters)-1].SetToClose(false)
+	a.quitters[len(a.quitters)-1].SetToClose(false)
 	quitfunc(a)
 }

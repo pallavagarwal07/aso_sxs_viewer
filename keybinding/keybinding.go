@@ -41,7 +41,7 @@ var (
 )
 
 func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) error {
-	if !Focus {
+	if !IsFocussed.GetFocus() {
 		for _, ctx := range BrowserList {
 			if err := chromedp.Run(ctx,
 				chrometool.ClickNthElement(sel, nthchild, chromedp.ByQueryAll),
@@ -49,7 +49,7 @@ func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) error {
 				return err
 			}
 		}
-		Focus = true
+		IsFocussed.SetFocus(true)
 	}
 
 	str := InterpretKeycode(X, e.State, e.Detail)
@@ -305,4 +305,11 @@ func (f Focus) SetFocus(isfocussed bool) {
 	f.focusmutex.Lock()
 	f.focus = isfocussed
 	f.focusmutex.Unlock()
+}
+
+func (f Focus) GetFocus() bool {
+	f.focusmutex.Lock()
+	isfocussed := f.focus
+	f.focusmutex.Unlock()
+	return isfocussed
 }

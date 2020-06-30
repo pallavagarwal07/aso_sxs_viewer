@@ -14,8 +14,8 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-const WINDOWHEIGHT = 800
-const WINDOWWIDTH = 1500
+const WINDOWHEIGHT = 1400
+const WINDOWWIDTH = 2000
 const CHROMECONNTIMEOUT = 30
 
 // Layout has the x , y coordinates of top left corner and width and height of window
@@ -103,7 +103,6 @@ func ForceQuit(a *QuitStruct) {
 }
 
 func establishChromeConnection(programState *command.ProgramState, timeout int) (context.Context, error) {
-	fmt.Println("time starts now")
 	wsURL, err := command.WsURL(programState, timeout)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Could not connect to the chrome window. Encountered error %s", err.Error()))
@@ -115,13 +114,10 @@ func establishChromeConnection(programState *command.ProgramState, timeout int) 
 		return nil, errors.New("must specify -devtools-ws-url")
 	}
 
-	fmt.Println(wsURL)
 	allocatorContext, _ := chromedp.NewRemoteAllocator(context.Background(), wsURL)
-	// defer cancel()
 
 	// create context
 	ctx, _ := chromedp.NewContext(allocatorContext)
-	// defer cancel()
 
 	return ctx, nil
 }

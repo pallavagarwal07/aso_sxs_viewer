@@ -66,7 +66,6 @@ func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitf
 		switch e := ev.(type) {
 
 		case xproto.KeyPressEvent:
-			fmt.Println("keypress encountered")
 			if err := keybinding.KeyPressHandler(X, keybinding.KeyPressEvent{&e}); err != nil {
 				errorHandler(err)
 			}
@@ -99,7 +98,6 @@ func errorHandler(err error) {
 
 func Navigate(ctxList []context.Context, url string) error {
 	for _, ctx := range ctxList {
-		fmt.Println(ctx)
 		if err := chromedp.Run(ctx,
 			chromedp.Navigate(url),
 		); err != nil {

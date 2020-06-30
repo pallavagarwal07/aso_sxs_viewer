@@ -1,4 +1,4 @@
-package main
+package createwindow
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 
 // Layout has the x , y coordinates of top left corner and width and height of window
 type Layout struct {
-	x, y, w, h uint16
+	x, y, w, h int
 }
 
 //Quitters has method quit that closes that window and kills that program
@@ -92,5 +92,25 @@ func ForceQuit(a *QuitStruct) {
 			q.Quit() // will be quitting the other open Chrome Windows
 		}
 	}
+
+}
+
+// DefaultWindowsLayout stores window size and position
+func DefaultWindowsLayout(screenInfo *xproto.ScreenInfo) (chromewindow1, chromewindow2, inputwindow Layout) {
+
+	heightScreen := screenInfo.HeightInPixels
+	widthScreen := screenInfo.WidthInPixels
+
+	chromewindow1.h = int(heightScreen - 150)
+	chromewindow1.w = int(widthScreen / 2)
+	chromewindow2.h = int(heightScreen - 150)
+	chromewindow2.w = int(widthScreen / 2)
+	inputwindow.h = 100
+	inputwindow.w = int(widthScreen)
+
+	chromewindow2.x = int(widthScreen / 2)
+	inputwindow.y = int(heightScreen - 150)
+
+	return chromewindow1, chromewindow2, inputwindow
 
 }

@@ -1,4 +1,4 @@
-package main
+package createwindow
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ func CreateInputWindow(layout Layout, quitfunc func(*QuitStruct),
 
 	wid, _ := xproto.NewWindowId(X)
 	cookie := xproto.CreateWindowChecked(X, screenInfo.RootDepth, wid, screenInfo.Root,
-		0, 0, layout.w, layout.h, 0,
+		0, 0, uint16(layout.w), uint16(layout.h), 0,
 		xproto.WindowClassInputOutput, screenInfo.RootVisual,
 		xproto.CwBackPixel|xproto.CwEventMask,
 		[]uint32{

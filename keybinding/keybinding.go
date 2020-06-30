@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"unicode"
 
 	"../chrometool"
@@ -21,11 +22,16 @@ type KeyPressEvent struct {
 	*xproto.KeyPressEvent
 }
 
+type Focus struct {
+	focus      bool
+	focusmutex sync.Mutex
+}
+
 var (
 	KeyMap      *xproto.GetKeyboardMappingReply
 	ModMap      *xproto.GetModifierMappingReply
 	BrowserList []context.Context
-	Focus       bool
+	IsFocussed  Focus
 )
 
 // to be removed after made configurable
@@ -293,4 +299,10 @@ func clipboardAction(ctx context.Context, str string, modifiers input.Modifier) 
 	}
 
 	return nil
+}
+
+func (f Focus) SetFocus(isfocussed bool) {
+	f.focusmutex.Lock()
+	f.focus = isfocussed
+	f.focusmutex.Unlock()
 }

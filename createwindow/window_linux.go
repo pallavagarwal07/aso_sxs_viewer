@@ -1,6 +1,6 @@
 // +build linux
 
-package main
+package createwindow
 
 import (
 	"fmt"
@@ -22,10 +22,12 @@ func Setup() {
 
 	X, screenInfo := Newconn(0, 0, 1600, 1600, n, q)
 
-	go CreateChromeWindow(layout1, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
-	go CreateChromeWindow(layout2, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
+	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
 
-	CreateInputWindow(layout3, ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
+
+	CreateInputWindow(inputwindow, ForceQuit, X, screenInfo, q)
 }
 
 // NewConn opens a Xephyr window on a particular display and connects to it
@@ -90,6 +92,11 @@ func CreateChromeWindow(layout Layout, userdatadir string, display string, quitf
 	}
 
 	programstate, err := command.ExecuteProgram(chromewindow, cmdErrorHandler)
+	if err != nil {
+		return err
+	}
+
+	wsURL, err := command.WsURL(programstate)
 	if err != nil {
 		return err
 	}

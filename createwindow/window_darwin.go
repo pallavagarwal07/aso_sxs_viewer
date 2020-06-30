@@ -1,6 +1,6 @@
 // +build darwin
 
-package main
+package createwindow
 
 import (
 	"fmt"
@@ -14,11 +14,13 @@ import (
 // Setup opens all the windows and establishes connection with the X server
 func Setup() {
 	q := new(QuitStruct)
-	X, screenInfo := Newconn()
+	X, screenInfo, _ := Newconn()
 
-	go CreateChromeWindow(layout1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
-	go CreateChromeWindow(layout2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q)
-	CreateInputWindow(layout3, ForceQuit, X, screenInfo, q)
+	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
+
+	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q)
+	CreateInputWindow(inputwindow, ForceQuit, X, screenInfo, q)
 }
 
 // Newconn establishes connection with XQuartz
@@ -31,6 +33,7 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo, error) {
 
 	setup := xproto.Setup(X)
 	screenInfo := setup.DefaultScreen(X)
+
 	return X, screenInfo, nil
 }
 
@@ -47,7 +50,11 @@ func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitSt
 	}
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
+	if err != nil {
+		return err
+	}
 
+	wsURL, err := command.WsURL(programstate)
 	if err != nil {
 		return err
 	}

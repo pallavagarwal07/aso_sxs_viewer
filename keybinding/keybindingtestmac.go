@@ -95,7 +95,9 @@ func eventloop(X *xgb.Conn) {
 
 		switch event := ev.(type) {
 		case xproto.KeyPressEvent:
-			KeyPressHandler(X, KeyPressEvent{&event})
+			if err := KeyPressHandler(X, KeyPressEvent{&event}); err != nil {
+				fmt.Println(err)
+			}
 
 		case xproto.MapNotifyEvent:
 			UpdateMaps(X)

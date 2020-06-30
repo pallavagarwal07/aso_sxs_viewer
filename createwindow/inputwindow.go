@@ -96,7 +96,7 @@ func enterNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc 
 	if _, err := cookie.Reply(); err != nil {
 		log.Fatalln(err)
 	}
-
+	// keybinding.Focus = false
 }
 
 func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.LeaveNotifyEvent) {

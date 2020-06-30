@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"../command"
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
 )
 
-//Setup opens all the windows and establishes connection with the X server
+// Setup opens all the windows and establishes connection with the X server
 func Setup() {
 	q := new(QuitStruct)
 	X, screenInfo := Newconn()
@@ -22,7 +23,7 @@ func Setup() {
 	CreateInputWindow(0, 0, 1280, 50, ForceQuit, X, screenInfo, q)
 }
 
-//Newconn establishes connection with XQuartz
+// Newconn establishes connection with XQuartz
 func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
 	X, err := xgb.NewConn()
 
@@ -35,7 +36,7 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo) {
 	return X, screenInfo
 }
 
-//CreateChromeWindow opens a Chrome browser session
+// CreateChromeWindow opens a Chrome browser session
 func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, quitfunc func(*QuitStruct),
 	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
 
@@ -56,6 +57,7 @@ func CreateChromeWindow(x int, y int, w int, h int, userdatadir string, quitfunc
 	(a.quitters) = append(a.quitters, ChromeWindow{programstate})
 
 	for {
+		time.Sleep(10 * time.Millisecond)
 		if programstate.IsRunning() == false {
 			fmt.Println("chrome closed- calling force quit")
 			quitfunc(a)

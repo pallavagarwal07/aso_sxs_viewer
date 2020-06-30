@@ -30,7 +30,7 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 	xproto.ConfigureWindow(X, wid,
 		xproto.ConfigWindowX|xproto.ConfigWindowY,
 		[]uint32{
-			uint32(layout.y), uint32(layout.x),
+			uint32(layout.x), uint32(layout.y),
 		})
 
 	a.Quitters = append(a.Quitters, InputWindow{wid, X, true})

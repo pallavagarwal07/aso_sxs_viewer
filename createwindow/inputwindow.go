@@ -8,9 +8,7 @@ import (
 )
 
 //CreateInputWindow creates window to capture keycodes
-func CreateInputWindow(layout Layout, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) (*xgb.Conn, xproto.Window, error) {
-
+func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
 	wid, _ := xproto.NewWindowId(X)
 	cookie := xproto.CreateWindowChecked(X, screenInfo.RootDepth, wid, screenInfo.Root,
 		0, 0, uint16(layout.w), uint16(layout.h), 0,
@@ -25,7 +23,7 @@ func CreateInputWindow(layout Layout, quitfunc func(*QuitStruct),
 				xproto.EventMaskStructureNotify})
 
 	if err := cookie.Check(); err != nil {
-		return nil, 0, err
+		return nil, 0, a, err
 	}
 
 	xproto.MapWindow(X, wid)
@@ -35,41 +33,9 @@ func CreateInputWindow(layout Layout, quitfunc func(*QuitStruct),
 			uint32(layout.y), uint32(layout.x),
 		})
 
-	a.quitters = append(a.quitters, InputWindow{wid, X, true})
+	a.Quitters = append(a.Quitters, InputWindow{wid, X, true})
 
-	eventloop(X, wid, a, quitfunc)
-
-	return X, wid, nil
-}
-
-func eventloop(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct)) {
-	for {
-
-		ev, err := X.WaitForEvent()
-
-		if err == nil && ev == nil {
-			fmt.Println("connection interrupted")
-			a.quitters[len(a.quitters)-1].SetToClose(false)
-			quitfunc(a)
-			return
-		}
-
-		switch b := ev.(type) {
-
-		case xproto.KeyPressEvent:
-			keyPresshandler(X, wid, a, quitfunc, b)
-		case xproto.KeyReleaseEvent:
-			keyReleasehandler(X, wid, a, quitfunc, b)
-		case xproto.EnterNotifyEvent:
-			enterNotifyhandler(X, wid, a, quitfunc, b)
-		case xproto.LeaveNotifyEvent:
-			leaveNotifyhandler(X, wid, a, quitfunc, b)
-		case xproto.UnmapNotifyEvent:
-			unmapNotifyhandler(X, wid, a, quitfunc, b)
-		}
-
-	}
-
+	return X, wid, a, nil
 }
 
 func keyPresshandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.KeyPressEvent) {
@@ -100,6 +66,6 @@ func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc 
 func unmapNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.UnmapNotifyEvent) {
 	fmt.Println("unmap notify event")
 	fmt.Println("connection interrupted")
-	a.quitters[len(a.quitters)-1].SetToClose(false)
+	a.Quitters[len(a.Quitters)-1].SetToClose(false)
 	quitfunc(a)
 }

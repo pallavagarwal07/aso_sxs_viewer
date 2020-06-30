@@ -3,7 +3,9 @@
 package createwindow
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"strconv"
@@ -15,26 +17,34 @@ import (
 )
 
 // Setup opens all windows and establishes connection with the x server
-func Setup() {
+func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
 
 	q := new(QuitStruct)
 	n := 1000 + rand.Intn(9999-1000+1) // the display number
 
-	X, screenInfo := Newconn(0, 0, 1600, 1600, n, q)
+	var xephyrLayout Layout
+	X, screenInfo, err := Newconn(xephyrLayout, n, q)
+	if err != nil {
+		return nil, 0, nil, err
+	}
 
 	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
 
-	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
-	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, ctxCh)
+	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, ctxCh)
 
-	CreateInputWindow(inputwindow, ForceQuit, X, screenInfo, q)
+	return CreateInputWindow(inputwindow, X, screenInfo, q)
 }
 
 // NewConn opens a Xephyr window on a particular display and connects to it
 func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.ScreenInfo, error) {
 	// step1: start xephyr on a particular display number with position and size
-
-	fmt.Sprintf("%dx%d+%d+%d", w, h, x, y)
+	if layout.h == 0 {
+		layout.h = WINDOWHEIGHT
+	}
+	if layout.w == 0 {
+		layout.w = WINDOWWIDTH
+	}
 
 	displayString := fmt.Sprintf(":%d", display)
 	xephyr := command.ExternalCommand{
@@ -53,7 +63,7 @@ func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.Scre
 	if err != nil {
 		return nil, nil, err
 	}
-	a.quitters = append(a.quitters, ChromeWindow{programstate})
+	a.Quitters = append(a.Quitters, ChromeWindow{programstate})
 
 	for {
 		_, err = os.Stat("/tmp/.X11-unix/X" + strconv.Itoa(display))
@@ -72,12 +82,12 @@ func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.Scre
 	setup := xproto.Setup(X)
 	screenInfo := setup.DefaultScreen(X)
 
-	return nil, X, screenInfo
+	return X, screenInfo, nil
 }
 
 // CreateChromeWindow opens chrome browser session in linux
 func CreateChromeWindow(layout Layout, userdatadir string, display string, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) error {
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, ctxCh chan context.Context) error {
 
 	chromewindow := command.ExternalCommand{
 		Path: "google-chrome",
@@ -93,22 +103,26 @@ func CreateChromeWindow(layout Layout, userdatadir string, display string, quitf
 
 	programstate, err := command.ExecuteProgram(chromewindow, cmdErrorHandler)
 	if err != nil {
+		log.Println("Could not execute google-chrome command. Encountered error %s", err.Error())
 		return err
 	}
 
-	wsURL, err := command.WsURL(programstate)
+	ctx, err := establishChromeConnection(programstate, CHROMECONNTIMEOUT)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
-	a.quitters = append(a.quitters, ChromeWindow{programstate})
+	ctxCh <- ctx
+
+	a.Quitters = append(a.Quitters, ChromeWindow{programstate})
 
 	// Close everything in case Chrome stops working
 	for {
 		if programstate.IsRunning() == false {
 			fmt.Println("chrome closed- calling force quit")
 			quitfunc(a)
-			return
+			return nil
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

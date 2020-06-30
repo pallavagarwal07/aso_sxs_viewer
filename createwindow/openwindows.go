@@ -1,6 +1,9 @@
 package createwindow
 
 import (
+	"context"
+	"errors"
+	"flag"
 	"fmt"
 
 	"sync"
@@ -9,7 +12,12 @@ import (
 
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
+	"github.com/knq/chromedp"
 )
+
+const WINDOWHEIGHT = 700
+const WINDOWWIDTH = 1200
+const CHROMECONNTIMEOUT = 5
 
 // Layout has the x , y coordinates of top left corner and width and height of window
 type Layout struct {
@@ -32,7 +40,7 @@ type InputWindow struct {
 
 //QuitStruct has the slice of quittes and the lock
 type QuitStruct struct {
-	quitters []Quitters
+	Quitters []Quitters
 	lock     sync.Mutex
 }
 
@@ -83,16 +91,37 @@ func ForceQuit(a *QuitStruct) {
 
 	fmt.Println("starting force quit")
 
-	if (a.quitters)[len(a.quitters)-1].ToClose() == true {
-		(a.quitters)[len(a.quitters)-1].Quit()
+	if (a.Quitters)[len(a.Quitters)-1].ToClose() == true {
+		(a.Quitters)[len(a.Quitters)-1].Quit()
 	}
 
-	for _, q := range (a.quitters)[:len(a.quitters)-1] {
+	for _, q := range (a.Quitters)[:len(a.Quitters)-1] {
 		if q.ToClose() == true {
 			q.Quit() // will be quitting the other open Chrome Windows
 		}
 	}
 
+}
+
+func establishChromeConnection(programState *command.ProgramState, timeout int) (context.Context, error) {
+	wsURL, err := command.WsURL(programState, timeout)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Could not connect to the chrome window. Encountered error %s", err.Error()))
+	}
+
+	var flagDevToolWsUrl = flag.String("devtools-ws-url", wsURL, "DevTools WebSsocket URL")
+	flag.Parse()
+	if *flagDevToolWsUrl == "" {
+		return nil, errors.New("must specify -devtools-ws-url")
+	}
+	allocatorContext, cancel := chromedp.NewRemoteAllocator(context.Background(), *flagDevToolWsUrl)
+	defer cancel()
+
+	// create context
+	ctx, cancel := chromedp.NewContext(allocatorContext)
+	defer cancel()
+
+	return ctx, nil
 }
 
 // DefaultWindowsLayout stores window size and position

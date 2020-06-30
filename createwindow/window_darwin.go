@@ -3,7 +3,9 @@
 package createwindow
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"../command"
@@ -12,15 +14,18 @@ import (
 )
 
 // Setup opens all the windows and establishes connection with the X server
-func Setup() {
+func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
 	q := new(QuitStruct)
-	X, screenInfo, _ := Newconn()
+	X, screenInfo, err := Newconn()
+	if err != nil {
+		return nil, 0, nil, err
+	}
 
 	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
 
-	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q)
-	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q)
-	CreateInputWindow(inputwindow, ForceQuit, X, screenInfo, q)
+	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q, ctxCh)
+	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q, ctxCh)
+	return CreateInputWindow(inputwindow, X, screenInfo, q)
 }
 
 // Newconn establishes connection with XQuartz
@@ -39,7 +44,7 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo, error) {
 
 // CreateChromeWindow opens a Chrome browser session
 func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) {
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, ctxCh context.Context) error {
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -51,15 +56,18 @@ func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitSt
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
-	wsURL, err := command.WsURL(programstate)
+	ctx, err := establishChromeConnection(programstate, CHROMECONNTIMEOUT)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
-	a.quitters = append(a.quitters, ChromeWindow{programstate})
+	ctxCh <- ctx
+	a.Quitters = append(a.Quitters, ChromeWindow{programstate})
 
 	for {
 		time.Sleep(10 * time.Millisecond)

@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	windowDimensionsJS = `[window.innerWidth, window.innerHeight];`
-	windowScrollJS     = `window.scrollBy(%d, %d);`
+	windowDimensionsJS  = `[window.innerWidth, window.innerHeight];`
+	windowScrollJS      = `window.scrollBy(%d, %d);`
+	clipboardInteractJS = `document.execCommand("%s")`
+	selectNthElementJS  = `document.querySelectorAll("%s")[%d].select()`
 )
 
 // SendKeysToNthElement is an element query action that synthesizes the key up, char, and down
@@ -137,4 +139,23 @@ func EvalNodeCenter(box *dom.BoxModel) (float64, float64, error) {
 	y /= float64(c / 2)
 
 	return x, y, nil
+}
+
+func ClipboardCommand(ctx context.Context, command string) error {
+	var res interface{}
+	if err := chromedp.Evaluate(fmt.Sprintf(clipboardInteractJS, command), &res).Do(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func SelectNthElement(ctx context.Context, sel interface{}, n int) error {
+	var res interface{}
+	if err := chromedp.Evaluate(fmt.Sprintf(selectNthElementJS, sel, n), &res).Do(ctx); err != nil {
+		if err.Error() == "encountered an undefined value" {
+			err = nil
+		}
+		return err
+	}
+	return nil
 }

@@ -2,9 +2,10 @@ package keybinding
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"runtime"
+	"strings"
 	"unicode"
 
 	"../chrometool"
@@ -33,13 +34,13 @@ var (
 	nthchild = 7
 )
 
-func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) {
+func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) error {
 	if !Focus {
 		for _, ctx := range BrowserList {
 			if err := chromedp.Run(ctx,
 				chrometool.ClickNthElement(sel, nthchild, chromedp.ByQueryAll),
 			); err != nil {
-				log.Fatal(err)
+				return err
 			}
 		}
 		Focus = true
@@ -48,9 +49,14 @@ func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) {
 	str := InterpretKeycode(X, e.State, e.Detail)
 
 	for _, ctx := range BrowserList {
-		for _, k := range dispatchKeyEvent(str, e.State) {
-			if err := k.Do(cdp.WithExecutor(ctx, chromedp.FromContext(ctx).Target)); err != nil {
-				log.Fatal(err)
+		ctx = cdp.WithExecutor(ctx, chromedp.FromContext(ctx).Target)
+		keyEvents, err := dispatchKeyEvent(ctx, str, e.State)
+		if err != nil {
+			return err
+		}
+		for _, k := range keyEvents {
+			if err := k.Do(ctx); err != nil {
+				return err
 			}
 		}
 	}
@@ -87,7 +93,7 @@ func InterpretKeycode(X *xgb.Conn, modifiers uint16, keycode xproto.Keycode) str
 	return ""
 }
 
-func dispatchKeyEvent(str string, modifiers uint16) []*input.DispatchKeyEventParams {
+func dispatchKeyEvent(ctx context.Context, str string, modifiers uint16) ([]*input.DispatchKeyEventParams, error) {
 	r := keyStrToRune[str]
 
 	// force \n -> \r
@@ -98,7 +104,7 @@ func dispatchKeyEvent(str string, modifiers uint16) []*input.DispatchKeyEventPar
 	// if not known key, encode as unidentified
 	v, ok := kb.Keys[r]
 	if !ok {
-		return kb.EncodeUnidentified(r)
+		return kb.EncodeUnidentified(r), nil
 	}
 
 	keyDown := input.DispatchKeyEventParams{
@@ -117,10 +123,17 @@ func dispatchKeyEvent(str string, modifiers uint16) []*input.DispatchKeyEventPar
 	}
 	keyDown.Modifiers |= keyEventModifier(modifiers)
 
+	if keyDown.Modifiers&input.ModifierCommand > 0 && runtime.GOOS == "darwin" {
+		if err := clipboardAction(ctx, str, keyDown.Modifiers); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+
 	keyUp := keyDown
 	keyDown.Type, keyUp.Type = input.KeyDown, input.KeyUp
 
-	return []*input.DispatchKeyEventParams{&keyDown, &keyUp}
+	return []*input.DispatchKeyEventParams{&keyDown, &keyUp}, nil
 }
 
 func keyEventModifier(modifiers uint16) input.Modifier {
@@ -144,7 +157,7 @@ func keyEventModifier(modifiers uint16) input.Modifier {
 }
 
 //UpdateMaps updates our view of Keyboard and Modifier Mapping
-func UpdateMaps(X *xgb.Conn) {
+func UpdateMaps(X *xgb.Conn) error {
 	min, max := GetMinMaxKeycode(X)
 	newKeymap, keyErr := xproto.GetKeyboardMapping(X, min,
 		byte(max-min+1)).Reply()
@@ -152,12 +165,12 @@ func UpdateMaps(X *xgb.Conn) {
 
 	// We can't do any key binding without a mapping from the server.
 	if keyErr != nil {
-		panic(fmt.Sprintf("COULD NOT GET KEYBOARD MAPPING: %v\n"+
+		return errors.New(fmt.Sprintf("COULD NOT GET KEYBOARD MAPPING: %v\n"+
 			"UNRECOVERABLE ERROR.\n",
 			keyErr))
 	}
 	if modErr != nil {
-		panic(fmt.Sprintf("COULD NOT GET MODIFIER MAPPING: %v\n"+
+		return errors.New(fmt.Sprintf("COULD NOT GET MODIFIER MAPPING: %v\n"+
 			"UNRECOVERABLE ERROR.\n",
 			modErr))
 	}
@@ -171,8 +184,7 @@ func GetMinMaxKeycode(X *xgb.Conn) (xproto.Keycode, xproto.Keycode) {
 	return xproto.Setup(X).MinKeycode, xproto.Setup(X).MaxKeycode
 }
 
-func interpretSymList(X *xgb.Conn, keycode xproto.Keycode) (
-	k1 string, k2 string, k3 string, k4 string) {
+func interpretSymList(X *xgb.Conn, keycode xproto.Keycode) (k1, k2, k3, k4 string) {
 
 	ks1 := GetKeysymFromMap(X, keycode, 0)
 	ks2 := GetKeysymFromMap(X, keycode, 1)
@@ -237,4 +249,42 @@ func GetStrFromKeysym(keysym xproto.Keysym) string {
 	}
 
 	return str
+}
+
+func clipboardAction(ctx context.Context, str string, modifiers uint16) error {
+	str = strings.ToLower(str)
+	isShift := modifiers & input.ModifierShift
+
+	switch str {
+	case "c":
+		if err := chrometool.ClipboardCommand(ctx, "copy"); err != nil {
+			return err
+		}
+
+	case "v":
+		if err := chrometool.ClipboardCommand(ctx, "paste"); err != nil {
+			return err
+		}
+
+	case "x":
+		if err := chrometool.ClipboardCommand(ctx, "cut"); err != nil {
+			return err
+		}
+
+	case "a":
+		if err := chrometool.SelectNthElement(ctx, sel, nthchild); err != nil {
+			return err
+		}
+
+	case "z":
+		if isShift {
+			if err := chrometool.ClipboardCommand(ctx, "redo"); err != nil {
+				return err
+			}
+		} else {
+			if err := chrometool.ClipboardCommand(ctx, "undo"); err != nil {
+				return err
+			}
+		}
+	}
 }

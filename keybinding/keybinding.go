@@ -60,6 +60,8 @@ func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) error {
 			}
 		}
 	}
+
+	return nil
 }
 
 // TODO: implement numlock and other modifiers
@@ -177,6 +179,7 @@ func UpdateMaps(X *xgb.Conn) error {
 
 	KeyMap = newKeymap
 	ModMap = newModmap
+	return nil
 }
 
 // GetMinMaxKeycode returns the minimum and maximum keycodes. They are typically 8 and 255, respectively.
@@ -251,7 +254,7 @@ func GetStrFromKeysym(keysym xproto.Keysym) string {
 	return str
 }
 
-func clipboardAction(ctx context.Context, str string, modifiers uint16) error {
+func clipboardAction(ctx context.Context, str string, modifiers input.Modifier) error {
 	str = strings.ToLower(str)
 	isShift := modifiers & input.ModifierShift
 
@@ -261,10 +264,11 @@ func clipboardAction(ctx context.Context, str string, modifiers uint16) error {
 			return err
 		}
 
-	case "v":
-		if err := chrometool.ClipboardCommand(ctx, "paste"); err != nil {
-			return err
-		}
+	// TODO
+	// case "v":
+	// 	if err := chrometool.ClipboardCommand(ctx, "paste"); err != nil {
+	// 		return err
+	// 	}
 
 	case "x":
 		if err := chrometool.ClipboardCommand(ctx, "cut"); err != nil {
@@ -277,7 +281,7 @@ func clipboardAction(ctx context.Context, str string, modifiers uint16) error {
 		}
 
 	case "z":
-		if isShift {
+		if isShift > 0 {
 			if err := chrometool.ClipboardCommand(ctx, "redo"); err != nil {
 				return err
 			}
@@ -287,4 +291,6 @@ func clipboardAction(ctx context.Context, str string, modifiers uint16) error {
 			}
 		}
 	}
+
+	return nil
 }

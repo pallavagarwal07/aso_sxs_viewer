@@ -75,8 +75,8 @@ func eventloop(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*Qui
 			leaveNotifyhandler(X, wid, a, quitfunc, b)
 		case xproto.UnmapNotifyEvent:
 			unmapNotifyhandler(X, wid, a, quitfunc, b)
-		default:
-			fmt.Println(a)
+			// default:
+			// fmt.Println(a)
 		}
 
 	}

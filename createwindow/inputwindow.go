@@ -38,24 +38,15 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 	return X, wid, a, nil
 }
 
-func keyPresshandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.KeyPressEvent) {
-	fmt.Println(b.Detail)
-}
-
-func keyReleasehandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.KeyReleaseEvent) {
-	fmt.Println(b.Detail)
-}
-
-func enterNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.EnterNotifyEvent) error {
+func EnterNotifyHandler(X *xgb.Conn, wid xproto.Window) error {
 	cookie := xproto.GrabKeyboard(X, true, wid, xproto.TimeCurrentTime, xproto.GrabModeAsync, xproto.GrabModeAsync)
 	if _, err := cookie.Reply(); err != nil {
 		return err
 	}
-	// keybinding.Focus = false
 	return nil
 }
 
-func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.LeaveNotifyEvent) error {
+func LeaveNotifyHandler(X *xgb.Conn) error {
 	cookie := xproto.UngrabKeyboardChecked(X, xproto.TimeCurrentTime)
 	if err := cookie.Check(); err != nil {
 		return err
@@ -63,7 +54,7 @@ func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc 
 	return nil
 }
 
-func unmapNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.UnmapNotifyEvent) {
+func UnmapNotifyHandler(a *QuitStruct, quitfunc func(*QuitStruct)) {
 	fmt.Println("unmap notify event")
 	fmt.Println("connection interrupted")
 	a.Quitters[len(a.Quitters)-1].SetToClose(false)

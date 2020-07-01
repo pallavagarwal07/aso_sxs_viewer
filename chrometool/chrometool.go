@@ -18,7 +18,7 @@ import (
 // Sel refers to the CSS selector and
 // position refers to their position among element nodes matching the selector.
 type NthChildSel struct {
-	Selector interface{}
+	Selector string
 	Position int
 }
 

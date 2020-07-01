@@ -21,30 +21,46 @@ import (
 )
 
 // Setup opens all windows and establishes connection with the x server
-func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
+func Setup(n int , ctxCh chan context.Context) (*xgb.Conn, xproto.Window, error) {
+	debuggingport:= 9222
+	var displayString string
 
-	q := new(QuitStruct)
-	n := 1000 + rand.Intn(9999-1000+1) // the display number
-
-	var xephyrLayout Layout
-	X, screenInfo, err := Newconn(xephyrLayout, n, q)
-	if err != nil {
-		return nil, 0, nil, err
+	var session Session{}
+	cmdErrorHandler := func(p *command.ProgramState, err error) error {
+		if err != nil {
+			fmt.Println("returned error %s, calling force quit", err.Error())
+		}
+		session.ForceQuit()
+		return err
 	}
 
-	debuggingport1 := 9222
-	debuggingport2 := 9223
+	if runtime.GOOS != "darwin"{
+	displayNumber := 1000 + rand.Intn(9999-1000+1)
+	displayString := fmt.Sprintf(":%d",displayNumber)
+	var xephyrLayout Layout
+	xephyrLayout.h, xephyrLayout.w = DefaultXephyrSize()
+	if err := CreateXephyrWindow(xephyrLayout,n,cmdErrorHandler);err != nil {
+		return nil, 0, err
+	}
+	}
 
-	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
+	X, screenInfo, err := newconn(fmt.Sprintf(":%d",n))
+	if err != nil {
+		return nil, 0, err
+	}
 
-	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, debuggingport1, ctxCh)
-	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, debuggingport2, ctxCh)
+	chromeLayouts, inputWindowLayout:= DefaultWindowsLayout(screenInfo,n)
 
-	return CreateInputWindow(inputwindow, X, screenInfo, q)
+	for i:= 1; i<=n ; i++{
+		cmd := ChromeCommand(chromeLayouts[i-1],fmt.Sprintf("%s/.aso_sxs_viewer/profiles/dir%d",os.Getenv("HOME"),i),displayString,debuggingport+i)
+		go session.CreateChromeWindow(cmd,ctxCh,cmdErrorHandler)
+	}
+
+	return CreateInputWindow(inputwindow, X, screenInfo)
 }
 
 // NewConn opens a Xephyr window on a particular display and connects to it
-func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.ScreenInfo, error) {
+func CreateXephyrWindow(layout Layout, display int,cmdErrorHandler func( *command.ProgramState, err error) error)  error{
 	// step1: start xephyr on a particular display number with position and size
 	if layout.h == 0 {
 		layout.h = WINDOWHEIGHT
@@ -58,8 +74,7 @@ func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.Scre
 		Path: "Xephyr",
 		Arg: []string{
 			displayString,
-			"-ac",
-			"-screen",
+			"-ac","-screen",
 			fmt.Sprintf("%dx%d+%d+%d", layout.w, layout.h, layout.x, layout.y),
 			"-br",
 			"-reset",
@@ -68,9 +83,9 @@ func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.Scre
 	}
 	programstate, err := command.ExecuteProgram(xephyr, cmdErrorHandler)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	a.Quitters = append(a.Quitters, ChromeWindow{programstate})
+	s.appendWindowList(ChromeWindow{programstate})
 
 	for {
 		_, err = os.Stat("/tmp/.X11-unix/X" + strconv.Itoa(display))
@@ -78,24 +93,13 @@ func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.Scre
 			break
 		}
 	}
-
-	// step2: start a connection with parent Xephyr on parent display
-	X, err := xgb.NewConnDisplay(displayString)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	setup := xproto.Setup(X)
-	screenInfo := setup.DefaultScreen(X)
-
-	return X, screenInfo, nil
+	return nil
 }
 
-// CreateChromeWindow opens chrome browser session in linux
-func CreateChromeWindow(layout Layout, userdatadir string, display string, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, debuggingPort int, ctxCh chan context.Context) error {
-
-	chromewindow := command.ExternalCommand{
+// PopulateCommand will take structured data after config file is implemented
+func ChromeCommand(layout Layout, userdatadir, display string,
+	debuggingPort int) command.ExternalCommand {
+    cmd := command.ExternalCommand{
 		Path: "google-chrome",
 		Arg: []string{
 			"--user-data-dir=" + userdatadir,
@@ -106,34 +110,7 @@ func CreateChromeWindow(layout Layout, userdatadir string, display string, quitf
 			"--disable-extensions",
 			fmt.Sprintf("--remote-debugging-port=%d", debuggingPort),
 		},
-
-		Env: []string{
-			"DISPLAY=" + display},
+        Env: []string{ "DISPLAY=" + display},
 	}
-
-	programstate, err := command.ExecuteProgram(chromewindow, cmdErrorHandler)
-	if err != nil {
-		log.Println("Could not execute google-chrome command. Encountered error %s", err.Error())
-		return err
-	}
-
-	ctx, err := establishChromeConnection(programstate, CHROMECONNTIMEOUT)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	ctxCh <- ctx
-
-	a.Quitters = append(a.Quitters, ChromeWindow{programstate})
-
-	// Close everything in case Chrome stops working
-	for {
-		if programstate.IsRunning() == false {
-			fmt.Println("chrome closed- calling force quit")
-			quitfunc(a)
-			return nil
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	return cmd
 }

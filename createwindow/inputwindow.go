@@ -1,12 +1,14 @@
 package createwindow
 
 import (
+	"fmt"
+
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
 )
 
-//CreateInputWindow creates window to capture keycodes
-func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
+// CreateInputWindow creates window to capture keycodes
+func (s *Session) CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo) (i InputWindow, err error) {
 	wid, _ := xproto.NewWindowId(X)
 	cookie := xproto.CreateWindowChecked(X, screenInfo.RootDepth, wid, screenInfo.Root,
 		0, 0, uint16(layout.w), uint16(layout.h), 0,
@@ -21,7 +23,7 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 				xproto.EventMaskStructureNotify})
 
 	if err := cookie.Check(); err != nil {
-		return nil, 0, a, err
+		return nil, err
 	}
 
 	xproto.MapWindow(X, wid)
@@ -31,7 +33,29 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 			uint32(layout.x), uint32(layout.y),
 		})
 
-	a.Quitters = append(a.Quitters, &InputWindow{wid, X})
+	s.appendWindowList(InputWindow{wid, X})
 
-	return X, wid, a, nil
+	return InputWindow{wid, X}, nil
+}
+
+func EnterNotifyHandler(X *xgb.Conn, wid xproto.Window) error {
+	cookie := xproto.GrabKeyboard(X, true, wid, xproto.TimeCurrentTime, xproto.GrabModeAsync, xproto.GrabModeAsync)
+	if _, err := cookie.Reply(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func LeaveNotifyHandler(X *xgb.Conn) error {
+	cookie := xproto.UngrabKeyboardChecked(X, xproto.TimeCurrentTime)
+	if err := cookie.Check(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func UnmapNotifyHandler(quitfunc func()) {
+	fmt.Println("unmap notify event")
+	fmt.Println("connection interrupted")
+	quitfunc()
 }

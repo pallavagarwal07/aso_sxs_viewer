@@ -7,7 +7,6 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-//CreateInputWindow creates window to capture keycodes
 func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
 	wid, _ := xproto.NewWindowId(X)
 	cookie := xproto.CreateWindowChecked(X, screenInfo.RootDepth, wid, screenInfo.Root,
@@ -30,7 +29,7 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 	xproto.ConfigureWindow(X, wid,
 		xproto.ConfigWindowX|xproto.ConfigWindowY,
 		[]uint32{
-			uint32(layout.y), uint32(layout.x),
+			uint32(layout.x), uint32(layout.y),
 		})
 
 	a.Quitters = append(a.Quitters, InputWindow{wid, X, true})
@@ -38,24 +37,15 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 	return X, wid, a, nil
 }
 
-func keyPresshandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.KeyPressEvent) {
-	fmt.Println(b.Detail)
-}
-
-func keyReleasehandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.KeyReleaseEvent) {
-	fmt.Println(b.Detail)
-}
-
-func enterNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.EnterNotifyEvent) error {
+func EnterNotifyHandler(X *xgb.Conn, wid xproto.Window) error {
 	cookie := xproto.GrabKeyboard(X, true, wid, xproto.TimeCurrentTime, xproto.GrabModeAsync, xproto.GrabModeAsync)
 	if _, err := cookie.Reply(); err != nil {
 		return err
 	}
-	// keybinding.Focus = false
 	return nil
 }
 
-func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.LeaveNotifyEvent) error {
+func LeaveNotifyHandler(X *xgb.Conn) error {
 	cookie := xproto.UngrabKeyboardChecked(X, xproto.TimeCurrentTime)
 	if err := cookie.Check(); err != nil {
 		return err
@@ -63,8 +53,7 @@ func leaveNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc 
 	return nil
 }
 
-func unmapNotifyhandler(X *xgb.Conn, wid xproto.Window, a *QuitStruct, quitfunc func(*QuitStruct), b xproto.UnmapNotifyEvent) {
-	fmt.Println("unmap notify event")
+func UnmapNotifyHandler(a *QuitStruct, quitfunc func(*QuitStruct)) {
 	fmt.Println("connection interrupted")
 	a.Quitters[len(a.Quitters)-1].SetToClose(false)
 	quitfunc(a)

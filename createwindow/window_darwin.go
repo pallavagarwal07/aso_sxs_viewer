@@ -23,8 +23,11 @@ func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, *QuitStruct, e
 
 	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
 
-	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q, ctxCh)
-	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q, ctxCh)
+	debuggingport1 := 9222
+	debuggingport2 := 9223
+
+	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q, debuggingport1, ctxCh)
+	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q, debuggingport2, ctxCh)
 	return CreateInputWindow(inputwindow, X, screenInfo, q)
 }
 
@@ -44,14 +47,16 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo, error) {
 
 // CreateChromeWindow opens a Chrome browser session
 func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, ctxCh context.Context) error {
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, debuggingport int, ctxCh chan context.Context) error {
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 		Arg: []string{"--user-data-dir=" + userdatadir,
 			fmt.Sprintf("--window-position=%d,%d", layout.x, layout.y),
-			fmt.Sprintf("--window-position=%d,%d", layout.w, layout.h),
-			"--disable-session-crashed-bubble", "--disble-infobars", "--disable-extensions"},
+			fmt.Sprintf("--window-size=%d,%d", layout.w, layout.h),
+			"--disable-session-crashed-bubble", "--disble-infobars", "--disable-extensions",
+			fmt.Sprintf("--remote-debugging-port=%d", debuggingport),
+		},
 	}
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
@@ -74,7 +79,7 @@ func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitSt
 		if programstate.IsRunning() == false {
 			fmt.Println("chrome closed- calling force quit")
 			quitfunc(a)
-			return
+			return nil
 		}
 	}
 }

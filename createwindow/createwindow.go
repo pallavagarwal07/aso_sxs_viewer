@@ -3,21 +3,20 @@ package createwindow
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 
 	"sync"
 
 	"../command"
 
+	"github.com/chromedp/chromedp"
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
-	"github.com/knq/chromedp"
 )
 
-const WINDOWHEIGHT = 700
-const WINDOWWIDTH = 1200
-const CHROMECONNTIMEOUT = 5
+const WINDOWHEIGHT = 1400
+const WINDOWWIDTH = 2000
+const CHROMECONNTIMEOUT = 30
 
 // Layout has the x , y coordinates of top left corner and width and height of window
 type Layout struct {
@@ -109,17 +108,16 @@ func establishChromeConnection(programState *command.ProgramState, timeout int) 
 		return nil, errors.New(fmt.Sprintf("Could not connect to the chrome window. Encountered error %s", err.Error()))
 	}
 
-	var flagDevToolWsUrl = flag.String("devtools-ws-url", wsURL, "DevTools WebSsocket URL")
-	flag.Parse()
-	if *flagDevToolWsUrl == "" {
+	// var flagDevToolWsUrl = flag.String("devtools-ws-url", wsURL, "DevTools WebSsocket URL")
+	// flag.Parse()
+	if wsURL == "" {
 		return nil, errors.New("must specify -devtools-ws-url")
 	}
-	allocatorContext, cancel := chromedp.NewRemoteAllocator(context.Background(), *flagDevToolWsUrl)
-	defer cancel()
+
+	allocatorContext, _ := chromedp.NewRemoteAllocator(context.Background(), wsURL)
 
 	// create context
-	ctx, cancel := chromedp.NewContext(allocatorContext)
-	defer cancel()
+	ctx, _ := chromedp.NewContext(allocatorContext)
 
 	return ctx, nil
 }

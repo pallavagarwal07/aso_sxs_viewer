@@ -178,9 +178,7 @@ func ClipboardCommand(ctx context.Context, command string) error {
 // The modifiers here refer to the xproto modifiers not to be confused with the ones in input.DispatchKeyEvent
 func DispatchKeyEventToBrowser(ctx context.Context, sel NthChildSel, str string, modifiers uint16, isFocussed bool) error {
 	if isFocussed {
-		if err := chromedp.Run(ctx,
-			ClickNthElement(sel, chromedp.ByQueryAll),
-		); err != nil {
+		if err := chromedp.Run(ctx, ClickNthElement(sel, chromedp.ByQueryAll)); err != nil {
 			return err
 		}
 	}

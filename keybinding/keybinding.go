@@ -55,24 +55,21 @@ func InterpretKeycode(X *xgb.Conn, modifiers uint16, keycode xproto.Keycode) str
 //UpdateMaps updates our view of Keyboard and Modifier Mapping
 func UpdateMaps(X *xgb.Conn) error {
 	min, max := getMinMaxKeycode(X)
-	newKeymap, keyErr := xproto.GetKeyboardMapping(X, min,
-		byte(max-min+1)).Reply()
-	newModmap, modErr := xproto.GetModifierMapping(X).Reply()
-
-	// We can't do any key binding without a mapping from the server.
+	newKeymap, keyErr := xproto.GetKeyboardMapping(X, min, byte(max-min+1)).Reply()
 	if keyErr != nil {
 		return fmt.Errorf("COULD NOT GET KEYBOARD MAPPING: %v\n"+
 			"UNRECOVERABLE ERROR.\n",
 			keyErr)
 	}
+
+	newModmap, modErr := xproto.GetModifierMapping(X).Reply()
 	if modErr != nil {
 		return fmt.Errorf("COULD NOT GET MODIFIER MAPPING: %v\n"+
 			"UNRECOVERABLE ERROR.\n",
 			modErr)
 	}
 
-	KeyMap = newKeymap
-	ModMap = newModmap
+	KeyMap, ModMap = newKeymap, newModmap
 	return nil
 }
 

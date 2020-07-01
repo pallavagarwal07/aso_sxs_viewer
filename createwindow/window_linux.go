@@ -28,10 +28,13 @@ func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, *QuitStruct, e
 		return nil, 0, nil, err
 	}
 
+	debuggingport1 := 9222
+	debuggingport2 := 9223
+
 	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
 
-	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, ctxCh)
-	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, ctxCh)
+	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, debuggingport1, ctxCh)
+	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ":"+strconv.Itoa(n), ForceQuit, X, screenInfo, q, debuggingport2, ctxCh)
 
 	return CreateInputWindow(inputwindow, X, screenInfo, q)
 }
@@ -68,7 +71,6 @@ func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.Scre
 	for {
 		_, err = os.Stat("/tmp/.X11-unix/X" + strconv.Itoa(display))
 		if !os.IsNotExist(err) {
-			fmt.Println("File exists")
 			break
 		}
 	}
@@ -87,15 +89,19 @@ func Newconn(layout Layout, display int, a *QuitStruct) (*xgb.Conn, *xproto.Scre
 
 // CreateChromeWindow opens chrome browser session in linux
 func CreateChromeWindow(layout Layout, userdatadir string, display string, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, ctxCh chan context.Context) error {
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, debuggingPort int, ctxCh chan context.Context) error {
 
 	chromewindow := command.ExternalCommand{
 		Path: "google-chrome",
 		Arg: []string{
 			"--user-data-dir=" + userdatadir,
 			fmt.Sprintf("--window-position=%d,%d", layout.x, layout.y),
-			fmt.Sprintf("--window-position=%d,%d", layout.w, layout.h),
-			"--disable-session-crashed-bubble", "--disble-infobars", "--disable-extensions"},
+			fmt.Sprintf("--window-size=%d,%d", layout.w, layout.h),
+			"--disable-session-crashed-bubble",
+			"--disble-infobars",
+			"--disable-extensions",
+			fmt.Sprintf("--remote-debugging-port=%d", debuggingPort),
+		},
 
 		Env: []string{
 			"DISPLAY=" + display},

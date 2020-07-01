@@ -1,19 +1,9 @@
 package keybinding
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"runtime"
-	"strings"
-	"sync"
 	"unicode"
 
-	"../chrometool"
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/input"
-	"github.com/chromedp/chromedp"
-	"github.com/chromedp/chromedp/kb"
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
 )
@@ -22,52 +12,13 @@ type KeyPressEvent struct {
 	*xproto.KeyPressEvent
 }
 
-type Focus struct {
-	focus      bool
-	focusmutex sync.Mutex
-}
-
 var (
-	KeyMap      *xproto.GetKeyboardMappingReply
-	ModMap      *xproto.GetModifierMappingReply
-	BrowserList []context.Context
-	IsFocussed  Focus
+	KeyMap *xproto.GetKeyboardMappingReply
+	ModMap *xproto.GetModifierMappingReply
 )
 
-// to be removed after made configurable
-var (
-	sel      = `input`
-	nthchild = 7
-)
-
-func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) error {
-	if !IsFocussed.GetFocus() {
-		for _, ctx := range BrowserList {
-			if err := chromedp.Run(ctx,
-				chrometool.ClickNthElement(sel, nthchild, chromedp.ByQueryAll),
-			); err != nil {
-				return err
-			}
-		}
-		IsFocussed.SetFocus(true)
-	}
-
-	str := InterpretKeycode(X, e.State, e.Detail)
-
-	for _, ctx := range BrowserList {
-		ctx = cdp.WithExecutor(ctx, chromedp.FromContext(ctx).Target)
-		keyEvents, err := dispatchKeyEvent(ctx, str, e.State)
-		if err != nil {
-			return err
-		}
-		for _, k := range keyEvents {
-			if err := k.Do(ctx); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+func InterpretKeyPressEvent(X *xgb.Conn, e KeyPressEvent) (str string, modifers uint16) {
+	return InterpretKeycode(X, e.State, e.Detail), e.State
 }
 
 // TODO: implement numlock and other modifiers
@@ -101,86 +52,23 @@ func InterpretKeycode(X *xgb.Conn, modifiers uint16, keycode xproto.Keycode) str
 	return ""
 }
 
-func dispatchKeyEvent(ctx context.Context, str string, modifiers uint16) ([]*input.DispatchKeyEventParams, error) {
-	r := keyStrToRune[str]
-
-	// force \n -> \r
-	if r == '\n' {
-		r = '\r'
-	}
-
-	// if not known key, encode as unidentified
-	v, ok := kb.Keys[r]
-	if !ok {
-		return kb.EncodeUnidentified(r), nil
-	}
-
-	keyDown := input.DispatchKeyEventParams{
-		Key:                   v.Key,
-		Code:                  v.Code,
-		NativeVirtualKeyCode:  v.Native,
-		WindowsVirtualKeyCode: v.Windows,
-		Text:                  v.Text,
-		UnmodifiedText:        v.Unmodified,
-	}
-	if runtime.GOOS == "darwin" {
-		keyDown.NativeVirtualKeyCode = 0
-	}
-	if v.Shift {
-		keyDown.Modifiers |= input.ModifierShift
-	}
-	keyDown.Modifiers |= keyEventModifier(modifiers)
-
-	if keyDown.Modifiers&input.ModifierCommand > 0 && runtime.GOOS == "darwin" {
-		if err := clipboardAction(ctx, str, keyDown.Modifiers); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
-
-	keyUp := keyDown
-	keyDown.Type, keyUp.Type = input.KeyDown, input.KeyUp
-
-	return []*input.DispatchKeyEventParams{&keyDown, &keyUp}, nil
-}
-
-func keyEventModifier(modifiers uint16) input.Modifier {
-	//Bit field representing pressed modifier keys. Alt=1, Ctrl=2, Meta/Command=4, Shift=8 (default: 0).
-	var mod input.Modifier
-
-	if modifiers&xproto.ModMaskShift > 0 {
-		mod |= input.ModifierShift
-	}
-	if modifiers&xproto.ModMaskControl > 0 {
-		mod |= input.ModifierCtrl
-	}
-	if modifiers&xproto.ModMask1 > 0 {
-		mod |= input.ModifierAlt
-	}
-	if modifiers&xproto.ModMask2 > 0 && runtime.GOOS == "darwin" {
-		mod |= input.ModifierCommand
-	}
-
-	return mod
-}
-
 //UpdateMaps updates our view of Keyboard and Modifier Mapping
 func UpdateMaps(X *xgb.Conn) error {
-	min, max := GetMinMaxKeycode(X)
+	min, max := getMinMaxKeycode(X)
 	newKeymap, keyErr := xproto.GetKeyboardMapping(X, min,
 		byte(max-min+1)).Reply()
 	newModmap, modErr := xproto.GetModifierMapping(X).Reply()
 
 	// We can't do any key binding without a mapping from the server.
 	if keyErr != nil {
-		return errors.New(fmt.Sprintf("COULD NOT GET KEYBOARD MAPPING: %v\n"+
+		return fmt.Errorf("COULD NOT GET KEYBOARD MAPPING: %v\n"+
 			"UNRECOVERABLE ERROR.\n",
-			keyErr))
+			keyErr)
 	}
 	if modErr != nil {
-		return errors.New(fmt.Sprintf("COULD NOT GET MODIFIER MAPPING: %v\n"+
+		return fmt.Errorf("COULD NOT GET MODIFIER MAPPING: %v\n"+
 			"UNRECOVERABLE ERROR.\n",
-			modErr))
+			modErr)
 	}
 
 	KeyMap = newKeymap
@@ -188,8 +76,8 @@ func UpdateMaps(X *xgb.Conn) error {
 	return nil
 }
 
-// GetMinMaxKeycode returns the minimum and maximum keycodes. They are typically 8 and 255, respectively.
-func GetMinMaxKeycode(X *xgb.Conn) (xproto.Keycode, xproto.Keycode) {
+// getMinMaxKeycode returns the minimum and maximum keycodes. They are typically 8 and 255, respectively.
+func getMinMaxKeycode(X *xgb.Conn) (xproto.Keycode, xproto.Keycode) {
 	return xproto.Setup(X).MinKeycode, xproto.Setup(X).MaxKeycode
 }
 
@@ -240,7 +128,7 @@ func interpretSymList(X *xgb.Conn, keycode xproto.Keycode) (k1, k2, k3, k4 strin
 // GetKeysymFromMap uses the KeyMap and finds a keysym associated
 // with the given keycode in the current X environment.
 func GetKeysymFromMap(X *xgb.Conn, keycode xproto.Keycode, column byte) xproto.Keysym {
-	min, _ := GetMinMaxKeycode(X)
+	min, _ := getMinMaxKeycode(X)
 	i := (int(keycode)-int(min))*int(KeyMap.KeysymsPerKeycode) + int(column)
 
 	return KeyMap.Keysyms[i]
@@ -258,58 +146,4 @@ func GetStrFromKeysym(keysym xproto.Keysym) string {
 	}
 
 	return str
-}
-
-func clipboardAction(ctx context.Context, str string, modifiers input.Modifier) error {
-	str = strings.ToLower(str)
-	isShift := modifiers & input.ModifierShift
-
-	switch str {
-	case "c":
-		if err := chrometool.ClipboardCommand(ctx, "copy"); err != nil {
-			return err
-		}
-
-	// TODO
-	// case "v":
-	// 	if err := chrometool.ClipboardCommand(ctx, "paste"); err != nil {
-	// 		return err
-	// 	}
-
-	case "x":
-		if err := chrometool.ClipboardCommand(ctx, "cut"); err != nil {
-			return err
-		}
-
-	case "a":
-		if err := chrometool.SelectNthElement(ctx, sel, nthchild); err != nil {
-			return err
-		}
-
-	case "z":
-		if isShift > 0 {
-			if err := chrometool.ClipboardCommand(ctx, "redo"); err != nil {
-				return err
-			}
-		} else {
-			if err := chrometool.ClipboardCommand(ctx, "undo"); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (f Focus) SetFocus(isfocussed bool) {
-	f.focusmutex.Lock()
-	f.focus = isfocussed
-	f.focusmutex.Unlock()
-}
-
-func (f Focus) GetFocus() bool {
-	f.focusmutex.Lock()
-	isfocussed := f.focus
-	f.focusmutex.Unlock()
-	return isfocussed
 }

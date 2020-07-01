@@ -98,10 +98,10 @@ func TestChromeTool(t *testing.T) {
 func sendActions(host string, val1, val2 *string) chromedp.Tasks {
 	return chromedp.Tasks{
 		chromedp.Navigate(host),
-		ClickNthElement(`.keystest`, 1, chromedp.ByQueryAll),
-		SendKeysToNthElement(`.keystest`, 1, "test1"),
+		ClickNthElement(NthChildSel{`.keystest`, 1}, chromedp.ByQueryAll),
+		SendKeysToNthElement(NthChildSel{`.keystest`, 1}, "test1"),
 		chromedp.Value(`#textarea1`, val1, chromedp.ByID),
-		ClickNthElement(`.clicktest`, 1, chromedp.ByQueryAll),
+		ClickNthElement(NthChildSel{`.clicktest`, 1}, chromedp.ByQueryAll),
 		chromedp.InnerHTML(`#p2`, val2, chromedp.ByID),
 	}
 }

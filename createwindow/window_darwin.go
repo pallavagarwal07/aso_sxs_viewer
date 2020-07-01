@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"../command"
 	"github.com/jezek/xgb"
@@ -14,11 +13,10 @@ import (
 )
 
 // Setup opens all the windows and establishes connection with the X server
-func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
-	q := new(QuitStruct)
+func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, error) {
 	X, screenInfo, err := Newconn()
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, err
 	}
 
 	chromewindow1, chromewindow2, inputwindow := DefaultWindowsLayout(screenInfo)
@@ -26,9 +24,9 @@ func Setup(ctxCh chan context.Context) (*xgb.Conn, xproto.Window, *QuitStruct, e
 	debuggingport1 := 9222
 	debuggingport2 := 9223
 
-	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, q, debuggingport1, ctxCh)
-	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, q, debuggingport2, ctxCh)
-	return CreateInputWindow(inputwindow, X, screenInfo, q)
+	go CreateChromeWindow(chromewindow1, "/tmp/aso_sxs_viewer/dir1", ForceQuit, X, screenInfo, debuggingport1, ctxCh)
+	go CreateChromeWindow(chromewindow2, "/tmp/aso_sxs_viewer/dir2", ForceQuit, X, screenInfo, debuggingport2, ctxCh)
+	return CreateInputWindow(inputwindow, X, screenInfo)
 }
 
 // Newconn establishes connection with XQuartz
@@ -47,7 +45,7 @@ func Newconn() (*xgb.Conn, *xproto.ScreenInfo, error) {
 
 // CreateChromeWindow opens a Chrome browser session
 func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitStruct),
-	X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct, debuggingport int, ctxCh chan context.Context) error {
+	X *xgb.Conn, screenInfo *xproto.ScreenInfo, debuggingport int, ctxCh chan context.Context) error {
 
 	cmd := command.ExternalCommand{
 		Path: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -72,14 +70,8 @@ func CreateChromeWindow(layout Layout, userdatadir string, quitfunc func(*QuitSt
 	}
 
 	ctxCh <- ctx
-	a.Quitters = append(a.Quitters, ChromeWindow{programstate})
+	appendProgramList(ChromeWindow{programstate})
+	//a.Quitters = append(a.Quitters, ChromeWindow{programstate})
 
-	for {
-		time.Sleep(10 * time.Millisecond)
-		if programstate.IsRunning() == false {
-			fmt.Println("chrome closed- calling force quit")
-			quitfunc(a)
-			return nil
-		}
-	}
+	return nil
 }

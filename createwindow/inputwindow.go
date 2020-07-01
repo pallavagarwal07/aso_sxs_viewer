@@ -8,7 +8,7 @@ import (
 )
 
 //CreateInputWindow creates window to capture keycodes
-func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo, a *QuitStruct) (*xgb.Conn, xproto.Window, *QuitStruct, error) {
+func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo) (*xgb.Conn, xproto.Window, error) {
 	wid, _ := xproto.NewWindowId(X)
 	cookie := xproto.CreateWindowChecked(X, screenInfo.RootDepth, wid, screenInfo.Root,
 		0, 0, uint16(layout.w), uint16(layout.h), 0,
@@ -23,7 +23,7 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 				xproto.EventMaskStructureNotify})
 
 	if err := cookie.Check(); err != nil {
-		return nil, 0, a, err
+		return nil, 0, err
 	}
 
 	xproto.MapWindow(X, wid)
@@ -33,9 +33,10 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 			uint32(layout.x), uint32(layout.y),
 		})
 
-	a.Quitters = append(a.Quitters, InputWindow{wid, X, true})
+	appendProgramList(InputWindow{wid, X})
+	//a.Quitters = append(a.Quitters, InputWindow{wid, X})
 
-	return X, wid, a, nil
+	return X, wid, nil
 }
 
 func EnterNotifyHandler(X *xgb.Conn, wid xproto.Window) error {
@@ -54,9 +55,8 @@ func LeaveNotifyHandler(X *xgb.Conn) error {
 	return nil
 }
 
-func UnmapNotifyHandler(a *QuitStruct, quitfunc func(*QuitStruct)) {
+func UnmapNotifyHandler(quitfunc func()) {
 	fmt.Println("unmap notify event")
 	fmt.Println("connection interrupted")
-	a.Quitters[len(a.Quitters)-1].SetToClose(false)
-	quitfunc(a)
+	quitfunc()
 }

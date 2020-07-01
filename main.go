@@ -23,7 +23,7 @@ func main() {
 	ctxCh := make(chan context.Context)
 	var openChromeWin int
 
-	X, wid, quitStruct, err := createwindow.Setup(ctxCh)
+	X, wid, err := createwindow.Setup(ctxCh)
 	if err != nil {
 		errorHandler(err)
 		return
@@ -44,10 +44,10 @@ func main() {
 		errorHandler(err)
 		return
 	}
-	eventLoop(X, wid, quitStruct, createwindow.ForceQuit)
+	eventLoop(X, wid, createwindow.ForceQuit)
 }
 
-func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitfunc func(*createwindow.QuitStruct)) {
+func eventLoop(X *xgb.Conn, wid xproto.Window, quitfunc func()) {
 	for {
 
 		ev, err := X.WaitForEvent()
@@ -58,8 +58,7 @@ func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitf
 
 		if ev == nil {
 			fmt.Println("connection interrupted")
-			a.Quitters[len(a.Quitters)-1].SetToClose(false)
-			quitfunc(a)
+			quitfunc()
 			return
 		}
 
@@ -84,7 +83,7 @@ func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitf
 				errorHandler(err)
 			}
 		case xproto.UnmapNotifyEvent:
-			createwindow.UnmapNotifyHandler(a, quitfunc)
+			createwindow.UnmapNotifyHandler(quitfunc)
 			return
 		}
 

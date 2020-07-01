@@ -33,7 +33,7 @@ func CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo
 			uint32(layout.x), uint32(layout.y),
 		})
 
-	a.Quitters = append(a.Quitters, InputWindow{wid, X, true})
+	a.Quitters = append(a.Quitters, &InputWindow{wid, X})
 
 	return X, wid, a, nil
 }
@@ -57,6 +57,5 @@ func LeaveNotifyHandler(X *xgb.Conn) error {
 func UnmapNotifyHandler(a *QuitStruct, quitfunc func(*QuitStruct)) {
 	fmt.Println("unmap notify event")
 	fmt.Println("connection interrupted")
-	a.Quitters[len(a.Quitters)-1].SetToClose(false)
 	quitfunc(a)
 }

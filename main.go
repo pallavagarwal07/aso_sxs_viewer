@@ -58,7 +58,6 @@ func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitf
 
 		if ev == nil {
 			fmt.Println("connection interrupted")
-			a.Quitters[len(a.Quitters)-1].SetToClose(false)
 			quitfunc(a)
 			return
 		}

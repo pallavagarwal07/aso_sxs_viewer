@@ -27,14 +27,12 @@ type Layout struct {
 type Quitters interface {
 	Quit()
 	ToClose() bool
-	SetToClose(bool)
 }
 
 //InputWindow is struct to hold information about the input window
 type InputWindow struct {
-	Wid    xproto.Window
-	Conn   *xgb.Conn
-	IsOpen bool
+	Wid  xproto.Window
+	Conn *xgb.Conn
 }
 
 //QuitStruct has the slice of quittes and the lock
@@ -58,27 +56,19 @@ func (p ChromeWindow) ToClose() bool {
 	return p.IsRunning()
 }
 
-//SetToClose method sets the value of IsRunning
-func (p ChromeWindow) SetToClose(b bool) {
-}
-
-//Quit method to close the input window
-func (p InputWindow) Quit() {
+// Quit method to close the input window
+func (p *InputWindow) Quit() {
 	p.Conn.Close()
 }
 
-//ToClose method checks whether InputWindow needs to be closed
-func (p InputWindow) ToClose() bool {
-	return p.IsOpen
+// ToClose method checks whether InputWindow needs to be closed
+func (p *InputWindow) ToClose() bool {
+	return true
 }
 
-//SetToClose method sets the value of IsOpen
-func (p InputWindow) SetToClose(b bool) {
-	p.IsOpen = b
-}
-
-/*this has to be omitted*/
+// tracks errors for execute program
 func cmdErrorHandler(p *command.ProgramState, err error) error {
+	fmt.Println(err)
 	return err
 }
 
@@ -90,11 +80,7 @@ func ForceQuit(a *QuitStruct) {
 
 	fmt.Println("starting force quit")
 
-	if (a.Quitters)[len(a.Quitters)-1].ToClose() == true {
-		(a.Quitters)[len(a.Quitters)-1].Quit()
-	}
-
-	for _, q := range (a.Quitters)[:len(a.Quitters)-1] {
+	for _, q := range a.Quitters {
 		if q.ToClose() == true {
 			q.Quit() // will be quitting the other open Chrome Windows
 		}
@@ -108,8 +94,6 @@ func establishChromeConnection(programState *command.ProgramState, timeout int) 
 		return nil, errors.New(fmt.Sprintf("Could not connect to the chrome window. Encountered error %s", err.Error()))
 	}
 
-	// var flagDevToolWsUrl = flag.String("devtools-ws-url", wsURL, "DevTools WebSsocket URL")
-	// flag.Parse()
 	if wsURL == "" {
 		return nil, errors.New("must specify -devtools-ws-url")
 	}

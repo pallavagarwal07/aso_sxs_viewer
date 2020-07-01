@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"runtime"
 	"strings"
 	"sync"
@@ -58,11 +59,13 @@ func KeyPressHandler(X *xgb.Conn, e KeyPressEvent) error {
 		ctx = cdp.WithExecutor(ctx, chromedp.FromContext(ctx).Target)
 		keyEvents, err := dispatchKeyEvent(ctx, str, e.State)
 		if err != nil {
-			return err
+			//return err
+			log.Println(err)
 		}
 		for _, k := range keyEvents {
 			if err := k.Do(ctx); err != nil {
-				return err
+				//return err
+				log.Println(err)
 			}
 		}
 	}
@@ -263,6 +266,7 @@ func GetStrFromKeysym(keysym xproto.Keysym) string {
 func clipboardAction(ctx context.Context, str string, modifiers input.Modifier) error {
 	str = strings.ToLower(str)
 	isShift := modifiers & input.ModifierShift
+	fmt.Println("clip board")
 
 	switch str {
 	case "c":
@@ -301,13 +305,13 @@ func clipboardAction(ctx context.Context, str string, modifiers input.Modifier) 
 	return nil
 }
 
-func (f Focus) SetFocus(isfocussed bool) {
+func (f *Focus) SetFocus(isfocussed bool) {
 	f.focusmutex.Lock()
 	f.focus = isfocussed
 	f.focusmutex.Unlock()
 }
 
-func (f Focus) GetFocus() bool {
+func (f *Focus) GetFocus() bool {
 	f.focusmutex.Lock()
 	isfocussed := f.focus
 	f.focusmutex.Unlock()

@@ -105,16 +105,16 @@ func (p *ProgramState) IsRunning() bool {
 
 func (p *ProgramState) Stdout() []byte {
 	p.stdoutmutex.Lock()
+	defer p.stdoutmutex.Unlock()
 	stdout := make([]byte, len(p.stdout))
 	copy(stdout, p.stdout)
-	p.stdoutmutex.Unlock()
 	return stdout
 }
 
 func (p *ProgramState) Stderr() []byte {
 	p.stderrmutex.Lock()
+	defer p.stderrmutex.Unlock()
 	stderr := make([]byte, len(p.stderr))
 	copy(stderr, p.stderr)
-	p.stderrmutex.Unlock()
 	return stderr
 }

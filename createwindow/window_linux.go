@@ -2,6 +2,10 @@
 
 package createwindow
 
+// +build linux
+
+package createwindow
+
 import (
 	"context"
 	"fmt"

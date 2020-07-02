@@ -94,11 +94,13 @@ func errorHandler(err error) {
 
 func Navigate(ctxList []context.Context, url string) error {
 	for _, ctx := range ctxList {
-		if err := chromedp.Run(ctx,
-			chromedp.Navigate(url),
-		); err != nil {
-			return err
-		}
+		go func(ctx context.Context) {
+			if err := chromedp.Run(ctx,
+				chromedp.Navigate(url),
+			); err != nil {
+				errorHandler(err)
+			}
+		}(ctx)
 	}
 	return nil
 }

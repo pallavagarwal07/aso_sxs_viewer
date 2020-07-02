@@ -2,28 +2,22 @@
 
 package createwindow
 
-// +build linux
-
-package createwindow
-
 import (
-	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"strconv"
-	"time"
 
 	"../command"
 	"github.com/jezek/xgb"
+	"github.com/jezek/xgb/randr"
 	"github.com/jezek/xgb/xproto"
 )
 
 // ChromeCommand will take structured data after config file is implemented
 func ChromeCommand(layout Layout, userdatadir, display string,
 	debuggingPort int) command.ExternalCommand {
-    cmd := command.ExternalCommand{
+	cmd := command.ExternalCommand{
 		Path: "google-chrome",
 		Arg: []string{
 			"--user-data-dir=" + userdatadir,
@@ -34,11 +28,10 @@ func ChromeCommand(layout Layout, userdatadir, display string,
 			"--disable-extensions",
 			fmt.Sprintf("--remote-debugging-port=%d", debuggingPort),
 		},
-        Env: []string{ "DISPLAY=" + display},
+		Env: []string{"DISPLAY=" + display},
 	}
 	return cmd
 }
-
 
 // CreateXephyrWindow opens a Xephyr window on a particular display and connects to it
 func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler func(p *command.ProgramState, err error) error) error {
@@ -103,4 +96,3 @@ func DefaultXephyrSize() (height, width uint16) {
 	}
 	return uint16(0.8 * float64(crtc.Height)), uint16(0.8 * float64(crtc.Width))
 }
-

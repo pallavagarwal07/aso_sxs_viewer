@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"os"
+	"runtime"
 
 	"sync"
 
@@ -144,15 +146,15 @@ func Setup(n int, ctxCh chan context.Context) (*Session, error) {
 		return err
 	}
 
-	/*if runtime.GOOS != "darwin" {
+	if runtime.GOOS != "darwin" {
 		displayNumber := 1000 + rand.Intn(9999-1000+1)
-		displayString := fmt.Sprintf(":%d", displayNumber)
+		displayString = fmt.Sprintf(":%d", displayNumber)
 		var xephyrLayout Layout
 		xephyrLayout.h, xephyrLayout.w = DefaultXephyrSize()
-		if err := session.CreateXephyrWindow(xephyrLayout, n, cmdErrorHandler); err != nil {
+		if err := session.CreateXephyrWindow(xephyrLayout, displayNumber, cmdErrorHandler); err != nil {
 			return nil, err
 		}
-	}*/
+	}
 
 	screenInfo, err := session.Newconn(displayString)
 	if err != nil {

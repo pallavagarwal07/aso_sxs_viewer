@@ -11,46 +11,48 @@ import (
 	"./keybinding"
 
 	"github.com/chromedp/chromedp"
-	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
 )
 
-const CHROMEWINDOWNUM = 2
-const URL = "https://mail.google.com"
+const (
+	chromeWindowNumber = 4 // upto 4 is working, 5 is not - don't know why
+	URL                = "https://mail.google.com"
+)
 
 func main() {
 	rand.Seed(time.Now().Unix())
 	ctxCh := make(chan context.Context)
 	var openChromeWin int
 
-	X, wid, quitStruct, err := createwindow.Setup(ctxCh)
+	session, err := createwindow.Setup(chromeWindowNumber, ctxCh)
 	if err != nil {
 		errorHandler(err)
 		return
 	}
 
-	for openChromeWin < CHROMEWINDOWNUM {
+	for openChromeWin < chromeWindowNumber {
 		ctx := <-ctxCh
-		keybinding.BrowserList = append(keybinding.BrowserList, ctx)
+		session.BrowserList = append(session.BrowserList, ctx)
 		openChromeWin++
 	}
 
-	if err := Navigate(keybinding.BrowserList, URL); err != nil {
+	if err := Navigate(session.BrowserList, URL); err != nil {
 		errorHandler(err)
 		return
 	}
 
-	if err := keybinding.UpdateMaps(X); err != nil {
+	// session.X vs. session.inputWin.Conn??
+	if err := keybinding.UpdateMaps(session.X); err != nil {
 		errorHandler(err)
 		return
 	}
-	eventLoop(X, wid, quitStruct, createwindow.ForceQuit)
+
+	eventLoop(session)
 }
 
-func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitfunc func(*createwindow.QuitStruct)) {
+func eventLoop(session *createwindow.Session) {
 	for {
-
-		ev, err := X.WaitForEvent()
+		ev, err := session.X.WaitForEvent()
 		if err != nil {
 			errorHandler(err)
 			continue
@@ -58,32 +60,26 @@ func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitf
 
 		if ev == nil {
 			fmt.Println("connection interrupted")
-			quitfunc(a)
+			session.ForceQuit()
 			return
 		}
 
-		switch e := ev.(type) {
+		switch ev.(type) {
 
 		case xproto.KeyPressEvent:
-			if err := keybinding.KeyPressHandler(X, keybinding.KeyPressEvent{&e}); err != nil {
-				errorHandler(err)
-			}
+			errorHandler(err)
+
 		case xproto.MapNotifyEvent:
-			if err := keybinding.UpdateMaps(X); err != nil {
-				errorHandler(err)
-				return
-			}
+			errorHandler(err)
+
 		case xproto.EnterNotifyEvent:
-			keybinding.IsFocussed.SetFocus(false)
-			if err := createwindow.EnterNotifyHandler(X, wid); err != nil {
-				errorHandler(err)
-			}
+			errorHandler(err)
+
 		case xproto.LeaveNotifyEvent:
-			if err := createwindow.LeaveNotifyHandler(X); err != nil {
-				errorHandler(err)
-			}
+			errorHandler(err)
+
 		case xproto.UnmapNotifyEvent:
-			createwindow.UnmapNotifyHandler(a, quitfunc)
+			createwindow.UnmapNotifyHandler(session.ForceQuit)
 			return
 		}
 
@@ -92,6 +88,7 @@ func eventLoop(X *xgb.Conn, wid xproto.Window, a *createwindow.QuitStruct, quitf
 }
 
 func errorHandler(err error) {
+	fmt.Println("error handler is to be implemented")
 	log.Println(err)
 }
 

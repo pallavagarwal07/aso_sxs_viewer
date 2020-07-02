@@ -87,8 +87,8 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_burntsushi_xgb",
-    importpath = "github.com/burntsushi/xgb",
-    sum = "h1:Gd2CDssqjxDzAoblktIQgLXBSeVsYCwR7l2iQXNJ+Ow=",
-    version = "v0.0.0-20200324125942-20f126ea2843",
+    name = "com_github_jezek_xgb",
+    importpath = "github.com/jezek/xgb",
+    sum = "h1:NU52wgodY6HxgoAugprm6aBzS04vi7/UE56kAgJp/G4=",
+    version = "v0.0.0-20200618214222-4dea1b947a10",
 )

@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "encoding.go",
+        "keybinding.go",
+    ],
+    importpath = "github.com/googleinterns/aso_sxs_viewer/keybinding",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_jezek_xgb//:go_default_library",
+        "@com_github_jezek_xgb//xproto:go_default_library",
+    ],
+)

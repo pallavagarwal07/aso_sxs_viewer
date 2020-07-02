@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	chromeWindowNumber = 4 // upto 4 is working, 5 is not - don't know why
+	chromeWindowNumber = 5 // upto 4 is working, 5 is not - don't know why
 	URL                = "https://mail.google.com"
 )
 

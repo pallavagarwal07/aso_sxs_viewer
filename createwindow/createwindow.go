@@ -91,7 +91,6 @@ func (s *Session) CreateChromeWindow(cmd command.ExternalCommand, ctxCh chan con
 	}
 
 	ctxCh <- ctx
-	// s.appendWindowList(ChromeWindow{programstate})
 	s.appendChromeList(ChromeWindow{programstate})
 	return nil
 }
@@ -111,6 +110,7 @@ func WindowsLayout(screenInfo *xproto.ScreenInfo, n int) (chromeLayouts []Layout
 
 	rows := int(n/4) + 1
 	columns := uint16(math.Ceil(float64(n / rows)))
+	fmt.Println(float64(n / rows))
 
 	var temp Layout
 	temp.h = uint16(int(heightScreen) / rows)
@@ -118,10 +118,8 @@ func WindowsLayout(screenInfo *xproto.ScreenInfo, n int) (chromeLayouts []Layout
 
 	for i, r := 0, rows; r > 0; r-- {
 		temp.y = uint32(uint16(r-1) * temp.h)
-		fmt.Println(temp.y)
 		for c := columns; c > 0 && i < n; c-- {
 			temp.x = uint32((c - 1) * temp.w)
-			fmt.Println(temp.x)
 			chromeLayouts = append(chromeLayouts, temp)
 			i++
 		}

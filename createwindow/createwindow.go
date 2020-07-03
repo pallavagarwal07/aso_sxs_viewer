@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"time"
 
 	"sync"
 
@@ -59,11 +60,11 @@ func (s *Session) getChromeList() []ChromeWindow {
 	return programs
 }
 
-func (p ChromeWindow) Quit() {
+func (p *ChromeWindow) Quit() {
 	p.progState.Command.Process.Kill()
 }
 
-func (p ChromeWindow) ToClose() bool {
+func (p *ChromeWindow) ToClose() bool {
 	return p.progState.IsRunning()
 }
 
@@ -195,8 +196,8 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 		Path: "Xephyr",
 		Arg: []string{
 			displayString,
-			"-ac", "-screen",
-			fmt.Sprintf("%dx%d+%d+%d", layout.w, layout.h, layout.x, layout.y),
+			"-ac",
+			"-screen", fmt.Sprintf("%dx%d+%d+%d", layout.w, layout.h, layout.x, layout.y),
 			"-br",
 			"-reset",
 			"-no-host-grab",
@@ -214,6 +215,7 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 		if !os.IsNotExist(err) {
 			break
 		}
+		time.Sleep(1 * time.Millisecond)
 	}
 	return nil
 }

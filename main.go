@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	chromeWindowNumber = 5
+	chromeWindowNumber = 2
 )
 
 func main() {

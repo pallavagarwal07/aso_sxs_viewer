@@ -38,7 +38,7 @@ func (s *Session) CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xpro
 }
 
 func UnmapNotifyHandler(quitfunc func()) {
-	fmt.Println("unmap notify event")
-	fmt.Println("connection interrupted")
+	fmt.Println("Input window was closed")
+	fmt.Println("Connection Interrupted")
 	quitfunc()
 }

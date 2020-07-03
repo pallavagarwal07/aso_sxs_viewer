@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"time"
 
-	"./createwindow"
-	"./keybinding"
+	"github.com/googleinterns/aso_sxs_viewer/createwindow"
+	"github.com/googleinterns/aso_sxs_viewer/keybinding"
 
 	"github.com/jezek/xgb/xproto"
 )

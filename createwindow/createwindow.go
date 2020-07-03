@@ -13,7 +13,7 @@ import (
 
 	"sync"
 
-	"../command"
+	"github.com/googleinterns/aso_sxs_viewer/command"
 
 	"github.com/chromedp/chromedp"
 	"github.com/jezek/xgb"

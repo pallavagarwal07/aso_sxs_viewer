@@ -15,33 +15,35 @@ import (
 )
 
 const (
-	chromeWindowNumber = 5 // upto 4 is working, 5 is not - don't know why
+	chromeWindowNumber = 5
 	URL                = "https://mail.google.com"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix())
-	ctxCh := make(chan context.Context)
-	var openChromeWin int
+	// var openChromeWin int
 
-	session, err := createwindow.Setup(chromeWindowNumber, ctxCh)
+	session, err := createwindow.Setup(chromeWindowNumber)
 	if err != nil {
 		errorHandler(err)
 		return
 	}
 
-	for openChromeWin < chromeWindowNumber {
-		ctx := <-ctxCh
-		session.BrowserList = append(session.BrowserList, ctx)
-		openChromeWin++
-	}
+	/*for openChromeWin < chromeWindowNumber {
+			session.BrowserList = append(session.BrowserList, ctx)
+	        openChromeWin++
+		}*/
 
-	if err := Navigate(session.BrowserList, URL); err != nil {
+	/*if err := Navigate(session.BrowserList, URL); err != nil {
+		errorHandler(err)
+		return
+	}*/
+
+	if err := Navigate(session.ChromeList, URL); err != nil {
 		errorHandler(err)
 		return
 	}
 
-	// session.X vs. session.inputWin.Conn??
 	if err := keybinding.UpdateMaps(session.X); err != nil {
 		errorHandler(err)
 		return
@@ -82,9 +84,7 @@ func eventLoop(session *createwindow.Session) {
 			createwindow.UnmapNotifyHandler(session.ForceQuit)
 			return
 		}
-
 	}
-
 }
 
 func errorHandler(err error) {
@@ -92,8 +92,9 @@ func errorHandler(err error) {
 	log.Println(err)
 }
 
-func Navigate(ctxList []context.Context, url string) error {
-	for _, ctx := range ctxList {
+func Navigate(chromeList []createwindow.ChromeWindow, url string) error {
+	for _, chrome := range chromeList {
+		ctx := chrome.Ctx
 		go func(ctx context.Context) {
 			if err := chromedp.Run(ctx,
 				chromedp.Navigate(url),
@@ -104,3 +105,16 @@ func Navigate(ctxList []context.Context, url string) error {
 	}
 	return nil
 }
+
+/*func Navigate(chromeList []createwindow.ChromeWindow, url string) error {
+	for _, chrome := range chromeList {
+		go func(chrome createwindow.ChromeWindow) {
+			if err := chromedp.Run(chrome.Ctx,
+				chromedp.Navigate(url),
+			); err != nil {
+				errorHandler(err)
+			}
+		}(chrome)
+	}
+	return nil
+}*/

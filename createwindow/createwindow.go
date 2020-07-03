@@ -72,7 +72,7 @@ func (p *InputWindow) Quit() {
 }
 
 func (s *Session) InitializeChromeWindow(cmd command.ExternalCommand,
-	cmdErrorHandler func(p *command.ProgramState, err error) error, URL string) error {
+	cmdErrorHandler func(err error) error, URL string) error {
 	chromeWindow, err := CreateChromeWindow(cmd, cmdErrorHandler)
 	if err != nil {
 		log.Println(err)
@@ -90,7 +90,7 @@ func (s *Session) InitializeChromeWindow(cmd command.ExternalCommand,
 
 // CreateChromeWindow opens a Chrome browser session.
 func CreateChromeWindow(cmd command.ExternalCommand,
-	cmdErrorHandler func(p *command.ProgramState, err error) error) (ChromeWindow, error) {
+	cmdErrorHandler func(err error) error) (ChromeWindow, error) {
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
 	if err != nil {
@@ -189,7 +189,7 @@ func (s *Session) ForceQuit() {
 
 }
 
-func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler func(p *command.ProgramState, err error) error) error {
+func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler func(err error) error) error {
 	displayString := fmt.Sprintf(":%d", display)
 	xephyr := command.ExternalCommand{
 		Path: "Xephyr",
@@ -252,7 +252,7 @@ func Setup(n int) (*Session, error) {
 	var session Session
 
 	// calls ForceQuit in case ChromeWindows are closed.
-	cmdErrorHandler := func(p *command.ProgramState, err error) error {
+	cmdErrorHandler := func(err error) error {
 		if err != nil {
 			fmt.Printf("returned error %s, calling force quit", err.Error())
 		}

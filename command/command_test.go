@@ -53,7 +53,7 @@ func TestExecuteProgram(t *testing.T) {
 	}
 }
 
-func testErrorHandler(p *ProgramState, err error) error {
+func testErrorHandler(err error) error {
 	if err != nil {
 		log.Fatalln("Invoked testErrorHandler with error %s", err.Error())
 		return fmt.Errorf("Invoked testErrorHandler with error %s", err.Error())

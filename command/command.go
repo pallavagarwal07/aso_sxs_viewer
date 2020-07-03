@@ -26,7 +26,7 @@ type ProgramState struct {
 }
 
 // ExecuteProgram invokes an external program
-func ExecuteProgram(command ExternalCommand, errorHandler func(*ProgramState, error) error) (*ProgramState, error) {
+func ExecuteProgram(command ExternalCommand, errorHandler func(error) error) (*ProgramState, error) {
 	var err error
 	programState := &ProgramState{}
 	cmd := exec.Command(command.Path, command.Arg...)
@@ -51,7 +51,7 @@ func ExecuteProgram(command ExternalCommand, errorHandler func(*ProgramState, er
 	return programState, err
 }
 
-func CloseProgram(programState *ProgramState, errorHandler func(*ProgramState, error) error) {
+func CloseProgram(programState *ProgramState, errorHandler func(error) error) {
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
@@ -65,7 +65,7 @@ func CloseProgram(programState *ProgramState, errorHandler func(*ProgramState, e
 	waitGroup.Wait()
 
 	err := programState.Command.Wait()
-	errorHandler(programState, err)
+	errorHandler(err)
 
 }
 

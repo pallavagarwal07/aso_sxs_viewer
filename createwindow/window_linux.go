@@ -4,14 +4,8 @@ package createwindow
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"strconv"
 
 	"../command"
-	"github.com/jezek/xgb"
-	"github.com/jezek/xgb/randr"
-	"github.com/jezek/xgb/xproto"
 )
 
 // ChromeCommand will take structured data after config file is implemented
@@ -32,5 +26,3 @@ func ChromeCommand(layout Layout, userdatadir, display string,
 	}
 	return cmd
 }
-
-

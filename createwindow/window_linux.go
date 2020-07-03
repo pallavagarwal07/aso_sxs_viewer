@@ -8,9 +8,8 @@ import (
 	"../command"
 )
 
-// ChromeCommand will take structured data after config file is implemented
-func ChromeCommand(layout Layout, userdatadir, display string,
-	debuggingPort int) command.ExternalCommand {
+// ChromeCommand will take structured data after config file is implemented.
+func ChromeCommand(layout Layout, userdatadir, display string, debuggingPort int) command.ExternalCommand {
 	cmd := command.ExternalCommand{
 		Path: "google-chrome",
 		Arg: []string{

@@ -7,7 +7,7 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-// CreateInputWindow creates window to capture keycodes
+// CreateInputWindow creates window to capture keycodes.
 func (s *Session) CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xproto.ScreenInfo) error {
 	wid, _ := xproto.NewWindowId(X)
 	cookie := xproto.CreateWindowChecked(X, screenInfo.RootDepth, wid, screenInfo.Root,

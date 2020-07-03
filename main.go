@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -10,36 +9,18 @@ import (
 	"./createwindow"
 	"./keybinding"
 
-	"github.com/chromedp/chromedp"
 	"github.com/jezek/xgb/xproto"
 )
 
 const (
 	chromeWindowNumber = 5
-	URL                = "https://mail.google.com"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix())
-	// var openChromeWin int
 
 	session, err := createwindow.Setup(chromeWindowNumber)
 	if err != nil {
-		errorHandler(err)
-		return
-	}
-
-	/*for openChromeWin < chromeWindowNumber {
-			session.BrowserList = append(session.BrowserList, ctx)
-	        openChromeWin++
-		}*/
-
-	/*if err := Navigate(session.BrowserList, URL); err != nil {
-		errorHandler(err)
-		return
-	}*/
-
-	if err := Navigate(session.ChromeList, URL); err != nil {
 		errorHandler(err)
 		return
 	}
@@ -91,30 +72,3 @@ func errorHandler(err error) {
 	fmt.Println("error handler is to be implemented")
 	log.Println(err)
 }
-
-func Navigate(chromeList []createwindow.ChromeWindow, url string) error {
-	for _, chrome := range chromeList {
-		ctx := chrome.Ctx
-		go func(ctx context.Context) {
-			if err := chromedp.Run(ctx,
-				chromedp.Navigate(url),
-			); err != nil {
-				errorHandler(err)
-			}
-		}(ctx)
-	}
-	return nil
-}
-
-/*func Navigate(chromeList []createwindow.ChromeWindow, url string) error {
-	for _, chrome := range chromeList {
-		go func(chrome createwindow.ChromeWindow) {
-			if err := chromedp.Run(chrome.Ctx,
-				chromedp.Navigate(url),
-			); err != nil {
-				errorHandler(err)
-			}
-		}(chrome)
-	}
-	return nil
-}*/

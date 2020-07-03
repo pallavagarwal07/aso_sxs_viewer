@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
 
 	"sync"
@@ -23,13 +25,14 @@ const (
 	windowHeight      = 1400
 	windowWidth       = 2000
 	chromeConnTimeout = 30
+	//will be removed once config is used
+	URL = "https://mail.google.com"
 )
 
 //Session contains all information that will be needed by main
 type Session struct {
-	lock sync.Mutex
-	X    *xgb.Conn
-	// BrowserList []context.Context
+	lock       sync.Mutex
+	X          *xgb.Conn
 	InputWin   InputWindow
 	ChromeList []ChromeWindow
 }
@@ -41,7 +44,7 @@ type ChromeWindow struct {
 
 type InputWindow struct {
 	Wid  xproto.Window
-	Conn *xgb.Conn // see when this can be replaced with Session.X
+	Conn *xgb.Conn
 }
 
 func (s *Session) appendChromeList(chromeWin ChromeWindow) {
@@ -70,23 +73,46 @@ func (p *InputWindow) Quit() {
 	p.Conn.Close()
 }
 
-// CreateChromeWindow opens a Chrome browser session
-func (s *Session) CreateChromeWindow(cmd command.ExternalCommand,
-	cmdErrorHandler func(p *command.ProgramState, err error) error) error {
-
-	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
+//SetupChromeWindow create a new window and
+func (s *Session) InitializeChromeWindow(cmd command.ExternalCommand,
+	cmdErrorHandler func(p *command.ProgramState, err error) error, URL string) error {
+	chromeWindow, err := CreateChromeWindow(cmd, cmdErrorHandler)
 	if err != nil {
 		log.Println(err)
 		return err
+	}
+
+	if err := SetupChrome(chromeWindow, URL); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	s.appendChromeList(chromeWindow)
+	return nil
+}
+
+// CreateChromeWindow opens a Chrome browser session
+func CreateChromeWindow(cmd command.ExternalCommand,
+	cmdErrorHandler func(p *command.ProgramState, err error) error) (ChromeWindow, error) {
+
+	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
+	if err != nil {
+		return ChromeWindow{}, err
 	}
 
 	ctx, err := establishChromeConnection(programstate, chromeConnTimeout)
 	if err != nil {
-		log.Println(err)
-		return err
+		return ChromeWindow{}, err
 	}
 
-	s.appendChromeList(ChromeWindow{programstate, ctx})
+	return ChromeWindow{programstate, ctx}, nil
+}
+
+func SetupChrome(chromeWindow ChromeWindow, URL string) error {
+	if err := chromedp.Run(chromeWindow.Ctx, chromedp.Navigate(URL)); err != nil {
+		return err
+	}
+	// TODO: use cookies to login if user allows
 	return nil
 }
 
@@ -118,48 +144,6 @@ func WindowsLayout(screenInfo *xproto.ScreenInfo, n int) (chromeLayouts []Layout
 		}
 	}
 	return chromeLayouts, inputwindow
-}
-
-// Setup opens all windows and establishes connection with the x server
-func Setup(n int) (*Session, error) {
-	debuggingport := 9222
-	var displayString string
-	var session Session
-
-	// calls ForceQuit in case ChromeWindows are closed
-	cmdErrorHandler := func(p *command.ProgramState, err error) error {
-		if err != nil {
-			fmt.Println("returned error %s, calling force quit", err.Error())
-		}
-		session.ForceQuit()
-		return err
-	}
-
-	/*if runtime.GOOS != "darwin" {
-		displayNumber := 1000 + rand.Intn(9999-1000+1)
-		displayString = fmt.Sprintf(":%d", displayNumber)
-		var xephyrLayout Layout
-		xephyrLayout.h, xephyrLayout.w = DefaultXephyrSize()
-		if err := session.CreateXephyrWindow(xephyrLayout, displayNumber, cmdErrorHandler); err != nil {
-			return nil, err
-		}
-	}*/
-
-	screenInfo, err := session.Newconn(displayString)
-	if err != nil {
-		return nil, err
-	}
-
-	chromeLayouts, inputWindowLayout := WindowsLayout(screenInfo, n)
-	for i := 1; i <= n; i++ {
-		cmd := ChromeCommand(chromeLayouts[i-1], fmt.Sprintf("%s/.aso_sxs_viewer/profiles/dir%d", os.Getenv("HOME"), i),
-			displayString, debuggingport+i)
-		go session.CreateChromeWindow(cmd, cmdErrorHandler)
-	}
-	if err := session.CreateInputWindow(inputWindowLayout, session.X, screenInfo); err != nil {
-		return nil, err
-	}
-	return &session, nil
 }
 
 func (s *Session) Newconn(displayString string) (*xproto.ScreenInfo, error) {
@@ -245,7 +229,7 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 }
 
 func DefaultXephyrSize() (height, width uint16) {
-	height, width = 900, 1600 // Sensible defaults in case the below fails.
+	height, width = 900, 1600
 
 	X, err := xgb.NewConn()
 	if err != nil {
@@ -269,4 +253,47 @@ func DefaultXephyrSize() (height, width uint16) {
 		return
 	}
 	return uint16(0.8 * float64(crtc.Height)), uint16(0.8 * float64(crtc.Width))
+}
+
+// Setup opens all windows and establishes connection with the x server
+func Setup(n int) (*Session, error) {
+	debuggingport := 9222
+	var displayString string
+	var session Session
+
+	// calls ForceQuit in case ChromeWindows are closed
+	cmdErrorHandler := func(p *command.ProgramState, err error) error {
+		if err != nil {
+			fmt.Printf("returned error %s, calling force quit", err.Error())
+		}
+		session.ForceQuit()
+		return err
+	}
+
+	if runtime.GOOS != "darwin" {
+		displayNumber := 1000 + rand.Intn(9999-1000+1)
+		displayString = fmt.Sprintf(":%d", displayNumber)
+		var xephyrLayout Layout
+		xephyrLayout.h, xephyrLayout.w = DefaultXephyrSize()
+		if err := session.CreateXephyrWindow(xephyrLayout, displayNumber, cmdErrorHandler); err != nil {
+			return nil, err
+		}
+	}
+
+	screenInfo, err := session.Newconn(displayString)
+	if err != nil {
+		return nil, err
+	}
+
+	chromeLayouts, inputWindowLayout := WindowsLayout(screenInfo, n)
+	for i := 1; i <= n; i++ {
+		cmd := ChromeCommand(chromeLayouts[i-1], fmt.Sprintf("%s/.aso_sxs_viewer/profiles/dir%d", os.Getenv("HOME"), i),
+			displayString, debuggingport+i)
+		//Will take a BrowserConfig as paramenter later
+		go session.InitializeChromeWindow(cmd, cmdErrorHandler, URL)
+	}
+	if err := session.CreateInputWindow(inputWindowLayout, session.X, screenInfo); err != nil {
+		return nil, err
+	}
+	return &session, nil
 }

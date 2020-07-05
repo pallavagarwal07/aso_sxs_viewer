@@ -1,8 +1,6 @@
 package createwindow
 
 import (
-	"fmt"
-
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
 )
@@ -35,10 +33,4 @@ func (s *Session) CreateInputWindow(layout Layout, X *xgb.Conn, screenInfo *xpro
 
 	s.InputWin = InputWindow{wid, X}
 	return nil
-}
-
-func UnmapNotifyHandler(quitfunc func()) {
-	fmt.Println("Input window was closed")
-	fmt.Println("Connection Interrupted")
-	quitfunc()
 }

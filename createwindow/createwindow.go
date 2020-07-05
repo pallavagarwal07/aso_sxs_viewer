@@ -33,17 +33,25 @@ type Session struct {
 	mu         sync.Mutex
 	X          *xgb.Conn
 	InputWin   InputWindow
+	RootWin    RootWindow
 	ChromeList []ChromeWindow
 }
 
 type ChromeWindow struct {
-	progState *command.ProgramState
-	Ctx       context.Context
+	progState          *command.ProgramState
+	Ctx                context.Context
+	InputFieldSelector CSSSelector
 }
-
 type InputWindow struct {
 	Wid  xproto.Window
 	Conn *xgb.Conn
+}
+type RootWindow struct {
+	progState *command.ProgramState
+}
+type CSSSelector struct {
+	Selector string
+	Position int
 }
 
 func (s *Session) appendChromeList(chromeWin ChromeWindow) {
@@ -59,9 +67,16 @@ func (s *Session) getChromeList() []ChromeWindow {
 	copy(programs, s.ChromeList)
 	return programs
 }
+func (p *RootWindow) Quit() {
+	p.progState.Command.Process.Kill()
+}
 
 func (p *ChromeWindow) Quit() {
 	p.progState.Command.Process.Kill()
+}
+
+func (p *RootWindow) ToClose() bool {
+	return p.progState.IsRunning()
 }
 
 func (p *ChromeWindow) ToClose() bool {
@@ -103,7 +118,7 @@ func CreateChromeWindow(cmd command.ExternalCommand,
 		return ChromeWindow{}, err
 	}
 
-	return ChromeWindow{programstate, ctx}, nil
+	return ChromeWindow{programstate, ctx, CSSSelector{"input", 7}}, nil
 }
 
 func SetupChrome(chromeWindow ChromeWindow, URL string) error {
@@ -185,8 +200,10 @@ func (s *Session) ForceQuit() {
 			q.Quit()
 		}
 	}
+
 	// Input Window is gracefully closed, closing closed window is okay.
 	s.InputWin.Quit()
+	s.RootWin.Quit()
 
 }
 
@@ -207,8 +224,8 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 	if err != nil {
 		return err
 	}
-	// the Xephyr window is not a chromewindow but maintained in the same list.
-	s.appendChromeList(ChromeWindow{programstate, nil})
+	// s.appendChromeList(ChromeWindow{programstate, nil})
+	s.RootWin = RootWindow{programstate}
 
 	for {
 		_, err = os.Stat("/tmp/.X11-unix/X" + strconv.Itoa(display))

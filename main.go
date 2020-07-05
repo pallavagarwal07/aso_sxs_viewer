@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"time"
 
 	"github.com/googleinterns/aso_sxs_viewer/createwindow"
-	"github.com/googleinterns/aso_sxs_viewer/keybinding"
+	"github.com/googleinterns/aso_sxs_viewer/event"
 
 	"github.com/jezek/xgb/xproto"
 )
@@ -21,12 +20,12 @@ func main() {
 
 	session, err := createwindow.Setup(chromeWindowNumber)
 	if err != nil {
-		errorHandler(err)
+		event.ErrorHandler(err)
 		return
 	}
 
-	if err := keybinding.UpdateMaps(session.X); err != nil {
-		errorHandler(err)
+	if err := event.MapNotifyHandler(session); err != nil {
+		event.ErrorHandler(err)
 		return
 	}
 
@@ -37,7 +36,7 @@ func eventLoop(session *createwindow.Session) {
 	for {
 		ev, err := session.X.WaitForEvent()
 		if err != nil {
-			errorHandler(err)
+			event.ErrorHandler(err)
 			continue
 		}
 
@@ -47,27 +46,30 @@ func eventLoop(session *createwindow.Session) {
 			return
 		}
 
-		switch ev.(type) {
+		switch e := ev.(type) {
 
 		case xproto.KeyPressEvent:
-			errorHandler(err)
+			event.KeyPressHandler(session, &e)
 
 		case xproto.MapNotifyEvent:
-			errorHandler(err)
+			if err := event.MapNotifyHandler(session); err != nil {
+				event.ErrorHandler(err)
+				return
+			}
 
 		case xproto.EnterNotifyEvent:
-			errorHandler(err)
+			if err := event.EnterNotifyHandler(session); err != nil {
+				event.ErrorHandler(err)
+			}
 
 		case xproto.LeaveNotifyEvent:
-			errorHandler(err)
+			if err := event.LeaveNotifyHandler(session); err != nil {
+				event.ErrorHandler(err)
+			}
 
 		case xproto.UnmapNotifyEvent:
-			errorHandler(err)
+			event.UnmapNotifyHandler(session)
+			return
 		}
 	}
-}
-
-func errorHandler(err error) {
-	fmt.Println("error handler is to be implemented")
-	log.Println(err)
 }

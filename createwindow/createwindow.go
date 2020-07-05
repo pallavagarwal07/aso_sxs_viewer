@@ -203,8 +203,9 @@ func (s *Session) ForceQuit() {
 
 	// Input Window is gracefully closed, closing closed window is okay.
 	s.InputWin.Quit()
-	s.RootWin.Quit()
-
+	if s.RootWin.ToClose() {
+		s.RootWin.Quit()
+	}
 }
 
 func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler func(err error) error) error {

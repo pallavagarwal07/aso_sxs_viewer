@@ -14,10 +14,10 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-// NthChildSel hold information about the target node
+// CSSSelector hold information about the target node
 // Sel refers to the CSS selector and
 // position refers to their position among element nodes matching the selector.
-type NthChildSel struct {
+type CSSSelector struct {
 	Selector string
 	Position int
 }
@@ -32,7 +32,7 @@ const (
 // SendKeysToNthElement is an element query action that synthesizes the key up, char, and down
 // events as needed for the runes in v, sending them to the nth element node
 // matching the selector.
-func SendKeysToNthElement(sel NthChildSel, v string, opts ...chromedp.QueryOption) chromedp.QueryAction {
+func SendKeysToNthElement(sel CSSSelector, v string, opts ...chromedp.QueryOption) chromedp.QueryAction {
 	return chromedp.QueryAfter(sel.Selector, func(ctx context.Context, nodes ...*cdp.Node) error {
 		if len(nodes) < 1 {
 			return fmt.Errorf("selector %q did not return any nodes", sel.Selector)
@@ -56,7 +56,7 @@ func keyEventNode(n *cdp.Node, keys string, opts ...chromedp.KeyOption) chromedp
 
 // ClickNthElement is an element query action that sends a mouse click event to the nth element
 // node matching the selector.
-func ClickNthElement(sel NthChildSel, opts ...chromedp.QueryOption) chromedp.QueryAction {
+func ClickNthElement(sel CSSSelector, opts ...chromedp.QueryOption) chromedp.QueryAction {
 	return chromedp.QueryAfter(sel.Selector, func(ctx context.Context, nodes ...*cdp.Node) error {
 		if len(nodes) < 1 {
 			return fmt.Errorf("selector %q did not return any nodes", sel.Selector)
@@ -154,7 +154,7 @@ func evalNodeCenter(box *dom.BoxModel) (float64, float64, error) {
 	return x, y, nil
 }
 
-func SelectNthElement(ctx context.Context, sel NthChildSel) error {
+func SelectNthElement(ctx context.Context, sel CSSSelector) error {
 	var res interface{}
 	if err := chromedp.Evaluate(fmt.Sprintf(selectNthElementJS, sel.Selector, sel.Position), &res).Do(ctx); err != nil {
 		if err.Error() == "encountered an undefined value" {
@@ -176,8 +176,8 @@ func ClipboardCommand(ctx context.Context, command string) error {
 // DispatchKeyEventToBrowser takes up the key's value to be dispatched to the browser usually the result of keybinding.InterpretKeycode
 // It clicks on the element if isFocussed is false and then sends the appropiate key with the modifiers
 // The modifiers here refer to the xproto modifiers not to be confused with the ones in input.DispatchKeyEvent
-func DispatchKeyEventToBrowser(ctx context.Context, sel NthChildSel, str string, modifiers uint16, isFocussed bool) error {
-	if isFocussed {
+func DispatchKeyEventToBrowser(ctx context.Context, sel CSSSelector, str string, modifiers uint16, isFocussed bool) error {
+	if !isFocussed {
 		if err := chromedp.Run(ctx, ClickNthElement(sel, chromedp.ByQueryAll)); err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func DispatchKeyEventToBrowser(ctx context.Context, sel NthChildSel, str string,
 	return nil
 }
 
-func dispatchKeyEvent(ctx context.Context, sel NthChildSel, str string, modifiers uint16) ([]*input.DispatchKeyEventParams, error) {
+func dispatchKeyEvent(ctx context.Context, sel CSSSelector, str string, modifiers uint16) ([]*input.DispatchKeyEventParams, error) {
 	r := keyStrToRune[str]
 
 	// force \n -> \r
@@ -259,7 +259,7 @@ func keyEventModifier(modifiers uint16) input.Modifier {
 	return mod
 }
 
-func clipboardAction(ctx context.Context, sel NthChildSel, str string, modifiers input.Modifier) error {
+func clipboardAction(ctx context.Context, sel CSSSelector, str string, modifiers input.Modifier) error {
 	str = strings.ToLower(str)
 	isShift := modifiers & input.ModifierShift
 

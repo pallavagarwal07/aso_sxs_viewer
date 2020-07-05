@@ -16,5 +16,5 @@ go_library(
         "@com_github_jezek_xgb//:go_default_library",
         "@com_github_jezek_xgb//randr:go_default_library",
         "@com_github_jezek_xgb//xproto:go_default_library",
-    ],
+    ] 
 )

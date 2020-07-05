@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["handlers.go"],
+    importpath = "github.com/googleinterns/aso_sxs_viewer/event",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//chrometool:go_default_library",
+        "//createwindow:go_default_library",
+        "//keybinding:go_default_library",
+        "@com_github_jezek_xgb//xproto:go_default_library",
+    ],
+)

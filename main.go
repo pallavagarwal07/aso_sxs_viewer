@@ -62,8 +62,7 @@ func eventLoop(session *createwindow.Session) {
 			errorHandler(err)
 
 		case xproto.UnmapNotifyEvent:
-			createwindow.UnmapNotifyHandler(session.ForceQuit)
-			return
+			errorHandler(err)
 		}
 	}
 }

@@ -18,7 +18,12 @@ const (
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	session, err := createwindow.Setup(chromeWindowNumber)
+	viewerConfig, err := config.GetConfig()
+	if err != nil {
+		errorHandler(err)
+	}
+
+	session, err := createwindow.Setup(viewerConfig)
 	if err != nil {
 		event.ErrorHandler(err)
 		return

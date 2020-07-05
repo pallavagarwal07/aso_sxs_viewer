@@ -3,32 +3,30 @@ package proto;
 
 message ViewerConfig {
     optional int32 browser_window_count = 1;
-    optional CSSSelector default_selector = 2;
-    optional string default_URL = 3;
+    optional CSSSelector css_selector = 2; //search bar selector
+    optional string url = 3;
     optional bool use_cookies = 4;
-  
-    repeated BrowserConfig browser_window = 5;
+    optional string user_data_dir_prefix = 5;
+    repeated BrowserConfig window_overrides = 6;
     enum WindowPosition {
         BOTTOM = 0; //default
         TOP = 1; 
     }
 
-    optional WindowPosition input_window_position = 6;
-    // Xephyr is used only for grouping windows in X based systems.
-    optional XephyrConfig xephyr_config = 15;
+    optional WindowPosition input_window_position = 7;
+    // RootWindowConfig is used only for grouping windows in X based systems.
+    optional RootWindowConfig root_window_config = 15;
 }
 message BrowserConfig {
-    optional CSSSelector override_css_selector = 1;
-    optional string override_URL = 2;
-    optional string usr_data_dir = 3;
+    optional CSSSelector css_selector = 1;
+    optional string url = 2;
 }
 message CSSSelector {
-    required string selector = 1;
+    optional string selector = 1;
     optional int32 position = 2;
 }
-message XephyrConfig {
-    optional int64 display = 1;
-    optional Layout layout = 2;
+message RootWindowConfig {
+    optional Layout layout = 1;
 }
 message Layout {
     optional int32 x = 1; // 0 for top left corner

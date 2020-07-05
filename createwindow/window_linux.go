@@ -5,7 +5,7 @@ package createwindow
 import (
 	"fmt"
 
-	"github.com/googleinterns/aso_sxs_viewer/command"
+	"../command"
 )
 
 // ChromeCommand will take structured data after config file is implemented.

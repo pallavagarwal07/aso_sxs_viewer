@@ -9,12 +9,22 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 )
 
+type ViewerConfig struct {
+	*proto.ViewerConfig
+}
+
+type BrowserConfig struct {
+	Selector string
+	Position int
+	URL      string
+}
+
 // GetConfig generates .aso_sxs_viewer directory and config file, if it doesn't already exists.
 // It validates the pre-existing config if found.
 // You should avoid repeated calls to avoid validation overhead.
-func GetConfig() (*proto.ViewerConfig, error) {
+func GetConfig() (ViewerConfig, error) {
 	if err := createDir(AsoSxSViewerDir); err != nil {
-		return nil, fmt.Errorf("Error %s encountered while creating aso_sxs_viewer directory", err.Error())
+		return ViewerConfig{nil}, fmt.Errorf("Error %s encountered while creating aso_sxs_viewer directory", err.Error())
 	}
 
 	return createOrValidateConfig(AsoSxSViewerConfig)
@@ -38,7 +48,7 @@ func createDir(dirPath string) error {
 	return nil
 }
 
-func createOrValidateConfig(filePath string) (*proto.ViewerConfig, error) {
+func createOrValidateConfig(filePath string) (ViewerConfig, error) {
 	// check if file exists
 	_, err := os.Stat(filePath)
 
@@ -47,91 +57,115 @@ func createOrValidateConfig(filePath string) (*proto.ViewerConfig, error) {
 		file, err := os.Create(filePath)
 		defer file.Close()
 		if err != nil {
-			return nil, err
+			return ViewerConfig{nil}, err
 		}
 		return generateConfig(filePath)
 	} else if err != nil {
-		return nil, err
+		return ViewerConfig{nil}, err
 	}
 	return validateConfig(filePath)
 }
 
-func generateConfig(configPath string) (*proto.ViewerConfig, error) {
+func generateConfig(configPath string) (ViewerConfig, error) {
 	viewerConfig := &proto.ViewerConfig{}
 
-	viewerConfig.DefaultSelector = &proto.CSSSelector{
+	viewerConfig.CssSelector = &proto.CSSSelector{
 		Selector: &DefaultCSSSelector.Selector,
 		Position: &DefaultCSSSelector.Position,
 	}
-
-	viewerConfig.Default_URL = &DefaultURL
+	viewerConfig.Url = &DefaultURL
 	viewerConfig.BrowserWindowCount = &DefaultBrowserCount
 	viewerConfig.UseCookies = &DefaultUseCookies
+	viewerConfig.UserDataDirPrefix = &DefaultUserDataDirPrefix
+
 	DefaultInputWindowPosition := proto.ViewerConfig_BOTTOM
 	viewerConfig.InputWindowPosition = &DefaultInputWindowPosition
 
-	xephyrLayout := &proto.Layout{
-		Width:  &DefaultXephyrWidth,
-		Height: &DefaultXephyrHeight,
+	rootWindowLayout := &proto.Layout{
+		Width:  &DefaultRootWindowWidth,
+		Height: &DefaultRootWindowHeight,
+	}
+	viewerConfig.RootWindowConfig = &proto.RootWindowConfig{
+		Layout: rootWindowLayout,
 	}
 
-	viewerConfig.XephyrConfig = &proto.XephyrConfig{
-		Layout: xephyrLayout,
-	}
-
-	marshalOpts := prototext.MarshalOptions{Multiline: true}
+	marshalOpts := prototext.MarshalOptions{Multiline: true, Indent: "\t"}
 	out, err := marshalOpts.Marshal(viewerConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to encode aso_sxs_viewer config %s", err)
+		return ViewerConfig{nil}, fmt.Errorf("Failed to encode aso_sxs_viewer config %s", err)
 	}
+	out = append(out, []byte(BrowserWindowExample)...)
 	if err := ioutil.WriteFile(configPath, out, 0644); err != nil {
-		return nil, fmt.Errorf("Failed to write aso_sxs_viewer config %s", err)
+		return ViewerConfig{nil}, fmt.Errorf("Failed to write aso_sxs_viewer config %s", err)
 	}
-	return viewerConfig, nil
+	return ViewerConfig{viewerConfig}, nil
 }
 
-func validateConfig(configPath string) (*proto.ViewerConfig, error) {
+// validateConfig validate the given configFile. Any assumptions made to handle essential empty fields are written back to the config file.
+func validateConfig(configPath string) (ViewerConfig, error) {
+	var writeChanges bool
 	in, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read aso_sxs_viewer config %s", err)
+		return ViewerConfig{nil}, fmt.Errorf("Failed to read aso_sxs_viewer config %s", err)
 	}
 
 	viewerConfig := &proto.ViewerConfig{}
 
 	if err := prototext.Unmarshal(in, viewerConfig); err != nil {
-		return nil, fmt.Errorf("Failed to parse aso_sxs_viewer config %s", err)
+		return ViewerConfig{nil}, fmt.Errorf("Failed to parse aso_sxs_viewer config %s", err)
 	}
 
 	if viewerConfig == nil {
-		return nil, fmt.Errorf("Found an empty config file, please delete the existing config and try again")
+		return ViewerConfig{nil}, fmt.Errorf("Found an empty config file, please delete the existing config and try again")
 	}
 
-	if browserCount := viewerConfig.GetBrowserWindowCount(); browserCount <= 0 {
-		return nil, fmt.Errorf("A positive browser_window_count field is required in the config.textproto file")
+	if viewerConfig.BrowserWindowCount == nil {
+		viewerConfig.BrowserWindowCount = &DefaultBrowserCount
+		writeChanges = true
+	} else if viewerConfig.GetBrowserWindowCount() <= 0 {
+		return ViewerConfig{nil}, fmt.Errorf("A positive browser_window_count field is required in the config.textproto file")
 	}
 
-	if CSSSelector := viewerConfig.GetDefaultSelector(); CSSSelector.GetSelector() == "" {
-		if browserWindows := viewerConfig.GetBrowserWindow(); browserWindows == nil {
-			return nil, fmt.Errorf("No valid CSS Selector found")
-		} else if browserWindows[0].GetOverrideCssSelector().GetSelector() == "" {
-			return nil, fmt.Errorf("No valid CSS Selector found")
+	// If both the CSSSelector and url are nil, try to populate them using the first WindowOverrides
+	// Otherwise use the populate them using the default values.
+	// If only one of the fields is non nil throw an error.
+	if CSSSelector, url := viewerConfig.GetCssSelector().GetSelector(), viewerConfig.GetUrl(); CSSSelector == "" && url == "" {
+		if windowsOverrides := viewerConfig.GetWindowOverrides(); windowsOverrides != nil && windowsOverrides[0].GetCssSelector().GetSelector() != "" && windowsOverrides[0].GetUrl() != "" {
+			viewerConfig.CssSelector = windowsOverrides[0].GetCssSelector()
+			url = windowsOverrides[0].GetUrl()
+			viewerConfig.Url = &url
 		} else {
-			//Set this CSS Selector as default to use in case a browserWindow does not have a selector.
-			viewerConfig.DefaultSelector = browserWindows[0].GetOverrideCssSelector()
+			viewerConfig.CssSelector = &proto.CSSSelector{
+				Selector: &DefaultCSSSelector.Selector,
+				Position: &DefaultCSSSelector.Position,
+			}
+			viewerConfig.Url = &DefaultURL
+		}
+		writeChanges = true
+	} else if CSSSelector == "" || url == "" {
+		return ViewerConfig{nil}, fmt.Errorf("A empty css_selector or url found, populate them in the config.textproto file and try again")
+	}
+
+	if rootWindow := viewerConfig.GetRootWindowConfig(); rootWindow != nil {
+		if layout := rootWindow.GetLayout(); layout != nil {
+			if layout.GetX() < 0 || layout.GetY() < 0 {
+				return ViewerConfig{nil}, fmt.Errorf("Invalid x or y in root_window_config layout, a non-negative int is expected in the config.textproto file")
+			}
+			if layout.GetWidth() < 0 || layout.GetHeight() < 0 {
+				return ViewerConfig{nil}, fmt.Errorf("Invalid height or width in root_window_config layout, a non-negative int is expected in the config.textproto file")
+			}
 		}
 	}
 
-	if url := viewerConfig.GetDefault_URL(); url == "" {
-		if browserWindows := viewerConfig.GetBrowserWindow(); browserWindows == nil {
-			return nil, fmt.Errorf("No valid URL found")
-		} else if browserWindows[0].GetOverride_URL() == "" {
-			return nil, fmt.Errorf("No valid URL found")
-		} else {
-			//Set this URL as default to use in case a browserWindow does not have a URL.
-			url = browserWindows[0].GetOverride_URL()
-			viewerConfig.Default_URL = &url
+	if writeChanges {
+		marshalOpts := prototext.MarshalOptions{Multiline: true, Indent: "\t"}
+		out, err := marshalOpts.Marshal(viewerConfig)
+		if err != nil {
+			return ViewerConfig{nil}, fmt.Errorf("Failed to encode aso_sxs_viewer config %s", err)
+		}
+		if err := ioutil.WriteFile(configPath, out, 0644); err != nil {
+			return ViewerConfig{nil}, fmt.Errorf("Failed to write aso_sxs_viewer config %s", err)
 		}
 	}
-
-	return viewerConfig, nil
+	return ViewerConfig{viewerConfig}, nil
 }

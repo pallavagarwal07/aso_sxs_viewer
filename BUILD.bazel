@@ -12,6 +12,7 @@ go_library(
     importpath = "github.com/googleinterns/aso_sxs_viewer",
     visibility = ["//visibility:private"],
     deps = [
+        "//config:go_default_library",
         "//createwindow:go_default_library",
         "//event:go_default_library",
         "@com_github_jezek_xgb//xproto:go_default_library",

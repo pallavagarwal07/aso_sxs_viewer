@@ -1,0 +1,37 @@
+syntax = "proto2";
+package proto;
+
+option go_package = "github.com/googleinterns/aso_sxs_viewer/proto";
+
+message ViewerConfig {
+    optional int32 browser_window_count = 1;
+    optional string url = 2;
+    optional CSSSelector css_selector = 3; //search bar selector
+    optional string user_data_dir_prefix = 4;
+    repeated BrowserConfig window_overrides = 5;
+    enum WindowPosition {
+        DEFAULT_BOTTOM = 0;
+        TOP = 1; 
+    }
+
+    optional WindowPosition input_window_position = 6;
+    // RootWindowConfig is used only for grouping windows in X based systems.
+    optional RootWindowConfig root_window_config = 15;
+}
+message BrowserConfig {
+    optional string url = 1;
+    optional CSSSelector css_selector = 2;
+}
+message CSSSelector {
+    optional string selector = 1;
+    optional int32 position = 2;
+}
+message RootWindowConfig {
+    optional Layout layout = 1;
+}
+message Layout {
+    optional int32 x = 1; // 0 for top left corner
+    optional int32 y = 2; // 0 for top left corner
+    optional int32 width = 3; 
+    optional int32 height = 4;
+}

@@ -3,19 +3,17 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "createwindow.go",
-        "inputwindow.go",
-        "window_darwin.go",
-        "window_linux.go",
+        "config.go",
+        "default.go",
+        "extract_config.go",
     ],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/createwindow",
+    importpath = "github.com/googleinterns/aso_sxs_viewer/config",
     visibility = ["//visibility:public"],
     deps = [
-        "//command:go_default_library",
-        "//config:go_default_library",
-        "@com_github_chromedp_chromedp//:go_default_library",
+        "//proto:go_default_library",
         "@com_github_jezek_xgb//:go_default_library",
         "@com_github_jezek_xgb//randr:go_default_library",
         "@com_github_jezek_xgb//xproto:go_default_library",
+        "@org_golang_google_protobuf//encoding/prototext:go_default_library",
     ],
 )

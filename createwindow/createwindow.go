@@ -14,9 +14,9 @@ import (
 
 	"sync"
 
-	"github.com/googleinterns/aso_sxs_viewer/command"
-
 	"github.com/chromedp/chromedp"
+	"github.com/googleinterns/aso_sxs_viewer/command"
+	"github.com/googleinterns/aso_sxs_viewer/config"
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/randr"
 	"github.com/jezek/xgb/xproto"
@@ -24,8 +24,6 @@ import (
 
 const (
 	chromeConnTimeout = 30
-	// will be removed once config is used.
-	URL = "https://mail.google.com"
 )
 
 // Session contains all information that will be needed by main.
@@ -106,15 +104,22 @@ func (s *Session) GetBrowserInputBarFocus() bool {
 	return isfocussed
 }
 
-func (s *Session) InitializeChromeWindow(cmd command.ExternalCommand,
-	cmdErrorHandler func(err error) error, URL string) error {
-	chromeWindow, err := CreateChromeWindow(cmd, cmdErrorHandler)
+func (s *Session) InitializeChromeWindows(browserList []*config.BrowserConfig, cmdList []command.ExternalCommand, cmdErrorHandler func(err error) error) error {
+	//TODO initialize just one window to login and use it to login to all windows
+	for i := 0; i < len(browserList); i++ {
+		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler)
+	}
+	return nil
+}
+
+func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) error {
+	chromeWindow, err := CreateChromeWindow(browserConfig, cmd, cmdErrorHandler)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	if err := SetupChrome(chromeWindow, URL); err != nil {
+	if err := SetupChrome(chromeWindow, browserConfig.GetUrl()); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -124,8 +129,7 @@ func (s *Session) InitializeChromeWindow(cmd command.ExternalCommand,
 }
 
 // CreateChromeWindow opens a Chrome browser session.
-func CreateChromeWindow(cmd command.ExternalCommand,
-	cmdErrorHandler func(err error) error) (ChromeWindow, error) {
+func CreateChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) (ChromeWindow, error) {
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
 	if err != nil {
@@ -137,7 +141,8 @@ func CreateChromeWindow(cmd command.ExternalCommand,
 		return ChromeWindow{}, err
 	}
 
-	return ChromeWindow{programstate, ctx, CSSSelector{"input", 7}}, nil
+	selector := CSSSelector{browserConfig.GetCssSelector().GetSelector(), int(browserConfig.GetCssSelector().GetPosition())}
+	return ChromeWindow{programstate, ctx, selector}, nil
 }
 
 func SetupChrome(chromeWindow ChromeWindow, URL string) error {
@@ -154,11 +159,19 @@ type Layout struct {
 	w, h uint16
 }
 
-func WindowsLayout(screenInfo *xproto.ScreenInfo, n int) (chromeLayouts []Layout, inputwindow Layout) {
-	heightScreen := 0.8 * float64(screenInfo.HeightInPixels)
+func WindowsLayout(screenInfo *xproto.ScreenInfo, inputOrientation string, n int) (chromeLayouts []Layout, inputwindow Layout) {
+	var yShift uint32
+	heightScreen := 0.85 * float64(screenInfo.HeightInPixels)
 	widthScreen := screenInfo.WidthInPixels
-	inputwindow.h, inputwindow.w = uint16(0.2*float64(screenInfo.HeightInPixels)), uint16(widthScreen)
-	inputwindow.y = uint32(heightScreen)
+	inputwindow.h, inputwindow.w = uint16(0.15*float64(screenInfo.HeightInPixels)), uint16(widthScreen)
+
+	if inputOrientation == "TOP" {
+		inputwindow.y = 0
+		yShift = uint32(inputwindow.h)
+	} else {
+		inputwindow.y = uint32(heightScreen)
+		yShift = 0
+	}
 
 	rows := int(n/4) + 1
 	columns := int(math.Ceil(float64(n) / float64(rows)))
@@ -168,7 +181,7 @@ func WindowsLayout(screenInfo *xproto.ScreenInfo, n int) (chromeLayouts []Layout
 	temp.w = uint16(int(widthScreen) / columns)
 
 	for i, r := 0, 0; r < rows; r++ {
-		temp.y = uint32(uint16(r) * temp.h)
+		temp.y = uint32(uint16(r)*temp.h) + yShift
 		for c := 0; c < columns && i < n; c++ {
 			temp.x = uint32(uint16(c) * temp.w)
 			chromeLayouts = append(chromeLayouts, temp)
@@ -244,7 +257,6 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 	if err != nil {
 		return err
 	}
-	// s.appendChromeList(ChromeWindow{programstate, nil})
 	s.RootWin = RootWindow{programstate}
 
 	for {
@@ -257,7 +269,7 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 	return nil
 }
 
-func DefaultXephyrSize() (height, width uint16) {
+func DefaultRootWindowSize() (height, width uint16) {
 	height, width = 900, 1600
 
 	X, err := xgb.NewConn()
@@ -285,9 +297,11 @@ func DefaultXephyrSize() (height, width uint16) {
 }
 
 // Setup opens all windows and establishes connection with the x server.
-func Setup(n int) (*Session, error) {
+func Setup(viewerConfig *config.ViewerConfig) (*Session, error) {
 	debuggingport := 9222
 	var displayString string
+	browserCount := viewerConfig.GetBrowserCount()
+
 	var session Session
 
 	// calls ForceQuit in case ChromeWindows are closed.
@@ -302,9 +316,9 @@ func Setup(n int) (*Session, error) {
 	if runtime.GOOS != "darwin" {
 		displayNumber := 1000 + rand.Intn(9999-1000+1)
 		displayString = fmt.Sprintf(":%d", displayNumber)
-		var xephyrLayout Layout
-		xephyrLayout.h, xephyrLayout.w = DefaultXephyrSize()
-		if err := session.CreateXephyrWindow(xephyrLayout, displayNumber, cmdErrorHandler); err != nil {
+		var rootLayout Layout
+		rootLayout.x, rootLayout.y, rootLayout.w, rootLayout.h = viewerConfig.GetRootWindowLayout()
+		if err := session.CreateXephyrWindow(rootLayout, displayNumber, cmdErrorHandler); err != nil {
 			return nil, err
 		}
 	}
@@ -314,13 +328,21 @@ func Setup(n int) (*Session, error) {
 		return nil, err
 	}
 
-	chromeLayouts, inputWindowLayout := WindowsLayout(screenInfo, n)
-	for i := 1; i <= n; i++ {
-		cmd := ChromeCommand(chromeLayouts[i-1], fmt.Sprintf("%s/.aso_sxs_viewer/profiles/dir%d", os.Getenv("HOME"), i),
-			displayString, debuggingport+i)
-		// Will take a BrowserConfig as paramenter later.
-		go session.InitializeChromeWindow(cmd, cmdErrorHandler, URL)
+	inputOrientation := viewerConfig.GetInputWindowOrientation()
+	chromeLayouts, inputWindowLayout := WindowsLayout(screenInfo, inputOrientation, browserCount)
+
+	var cmdList []command.ExternalCommand
+	userDataDirPath := viewerConfig.GetUserDataDirPath()
+	for i := 1; i <= browserCount; i++ {
+		cmd := ChromeCommand(chromeLayouts[i-1], fmt.Sprintf("%s/dir%d", userDataDirPath, i), displayString, debuggingport+i)
+		cmdList = append(cmdList, cmd)
 	}
+
+	browserList := viewerConfig.GetBrowserConfigList()
+	if err := session.InitializeChromeWindows(browserList, cmdList, cmdErrorHandler); err != nil {
+		return nil, err
+	}
+
 	if err := session.CreateInputWindow(inputWindowLayout, session.X, screenInfo); err != nil {
 		return nil, err
 	}

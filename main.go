@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/googleinterns/aso_sxs_viewer/config"
 	"github.com/googleinterns/aso_sxs_viewer/createwindow"
 	"github.com/googleinterns/aso_sxs_viewer/event"
 
@@ -18,7 +19,12 @@ const (
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	session, err := createwindow.Setup(chromeWindowNumber)
+	viewerConfig, err := config.GetConfig()
+	if err != nil {
+		event.ErrorHandler(err)
+	}
+
+	session, err := createwindow.Setup(viewerConfig)
 	if err != nil {
 		event.ErrorHandler(err)
 		return

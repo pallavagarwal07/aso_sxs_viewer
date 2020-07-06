@@ -14,9 +14,7 @@ type ViewerConfig struct {
 }
 
 type BrowserConfig struct {
-	Selector string
-	Position int
-	URL      string
+	proto.BrowserConfig
 }
 
 // GetConfig generates .aso_sxs_viewer directory and config file, if it doesn't already exists.
@@ -47,7 +45,7 @@ func createOrValidateConfig(filePath string) (*ViewerConfig, error) {
 
 	// create file if not exists
 	if os.IsNotExist(err) {
-		file, err := os.Create(filePath)
+		_, err := os.Create(filePath)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +64,6 @@ func createOrValidateConfig(filePath string) (*ViewerConfig, error) {
 			return nil, fmt.Errorf("Failed to write aso_sxs_viewer config %s", err)
 		}
 
-		defer file.Close()
 		return &ViewerConfig{*viewerConfig}, nil
 	} else if err != nil {
 		return nil, err
@@ -124,11 +121,13 @@ func validateConfig(configPath string) (*ViewerConfig, error) {
 	// If either the CSSSelector and url are nil, we try to iterate through the overriden windows to check
 	// if they have a missing field which does not have a default value, and throw an error if such a window is found.
 	if CSSSelector, url := viewerConfig.GetCssSelector().GetSelector(), viewerConfig.GetUrl(); CSSSelector == "" || url == "" {
-		for _, windowsOverride := range viewerConfig.GetWindowOverrides() {
-			if url == "" && windowsOverride.GetUrl() == "" {
+		windowsOverrides := viewerConfig.GetWindowOverrides()
+		overrideLength := min(len(windowsOverrides), int(viewerConfig.GetBrowserWindowCount()))
+		for i := 0; i < overrideLength; i++ {
+			if url == "" && windowsOverrides[i].GetUrl() == "" {
 				return nil, fmt.Errorf("A empty css_selector or url found, try populating the default values in the config.textproto file and try again")
 			}
-			if CSSSelector == "" && windowsOverride.GetCssSelector().GetSelector() == "" {
+			if CSSSelector == "" && windowsOverrides[i].GetCssSelector().GetSelector() == "" {
 				return nil, fmt.Errorf("A empty css_selector or url found, try populating the default values in the config.textproto file and try again")
 			}
 		}

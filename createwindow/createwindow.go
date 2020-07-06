@@ -104,7 +104,7 @@ func (s *Session) GetBrowserInputBarFocus() bool {
 	return isfocussed
 }
 
-func (s *Session) InitializeChromeWindows(browserList []config.BrowserConfig, cmdList []command.ExternalCommand, cmdErrorHandler func(err error) error) error {
+func (s *Session) InitializeChromeWindows(browserList []*config.BrowserConfig, cmdList []command.ExternalCommand, cmdErrorHandler func(err error) error) error {
 	//TODO initialize just one window to login and use it to login to all windows
 	for i := 0; i < len(browserList); i++ {
 		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler)
@@ -112,14 +112,14 @@ func (s *Session) InitializeChromeWindows(browserList []config.BrowserConfig, cm
 	return nil
 }
 
-func (s *Session) initializeChromeWindow(browserConfig config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) error {
+func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) error {
 	chromeWindow, err := CreateChromeWindow(browserConfig, cmd, cmdErrorHandler)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
-	if err := SetupChrome(chromeWindow, browserConfig.URL); err != nil {
+	if err := SetupChrome(chromeWindow, browserConfig.GetUrl()); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -129,7 +129,7 @@ func (s *Session) initializeChromeWindow(browserConfig config.BrowserConfig, cmd
 }
 
 // CreateChromeWindow opens a Chrome browser session.
-func CreateChromeWindow(browserConfig config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) (ChromeWindow, error) {
+func CreateChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) (ChromeWindow, error) {
 
 	programstate, err := command.ExecuteProgram(cmd, cmdErrorHandler)
 	if err != nil {
@@ -141,7 +141,7 @@ func CreateChromeWindow(browserConfig config.BrowserConfig, cmd command.External
 		return ChromeWindow{}, err
 	}
 
-	selector := CSSSelector{browserConfig.Selector, browserConfig.Position}
+	selector := CSSSelector{browserConfig.GetCssSelector().GetSelector(), int(browserConfig.GetCssSelector().GetPosition())}
 	return ChromeWindow{programstate, ctx, selector}, nil
 }
 

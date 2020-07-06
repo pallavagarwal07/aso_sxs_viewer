@@ -1,5 +1,9 @@
 package config
 
+import (
+	"github.com/googleinterns/aso_sxs_viewer/proto"
+)
+
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -42,37 +46,34 @@ func (vc *ViewerConfig) GetUserDataDirPath() string {
 	return DefaultUserDataDirPrefix
 }
 
-func (vc *ViewerConfig) GetBrowserConfigList() []BrowserConfig {
+func (vc *ViewerConfig) GetBrowserConfigList() []*BrowserConfig {
 	windowsOverrides := vc.GetWindowOverrides()
 	BrowserCount := vc.GetBrowserCount()
-	var BrowserList []BrowserConfig
-	var tempBrowser BrowserConfig
+	var BrowserList []*BrowserConfig
+	tempBrowser := &proto.BrowserConfig{}
 	var i int
 
 	overrideLength := min(len(windowsOverrides), BrowserCount)
 	for i = 0; i < overrideLength; i++ {
 		if sel := windowsOverrides[i].GetCssSelector().GetSelector(); sel != "" {
-			tempBrowser.Selector = sel
-			tempBrowser.Position = int(windowsOverrides[i].GetCssSelector().GetPosition())
+			tempBrowser.CssSelector = windowsOverrides[i].GetCssSelector()
 		} else {
-			tempBrowser.Selector = vc.GetCssSelector().GetSelector()
-			tempBrowser.Position = int(vc.GetCssSelector().GetPosition())
+			tempBrowser.CssSelector = vc.GetCssSelector()
 		}
 
 		if url := windowsOverrides[i].GetUrl(); url != "" {
-			tempBrowser.URL = url
+			tempBrowser.Url = windowsOverrides[i].Url
 		} else {
-			tempBrowser.URL = vc.GetUrl()
+			tempBrowser.Url = vc.Url
 		}
-		BrowserList = append(BrowserList, tempBrowser)
+		BrowserList = append(BrowserList, &BrowserConfig{*tempBrowser})
 	}
 
-	tempBrowser.Selector = vc.GetCssSelector().GetSelector()
-	tempBrowser.Position = int(vc.GetCssSelector().GetPosition())
-	tempBrowser.URL = vc.GetUrl()
+	tempBrowser.CssSelector = vc.GetCssSelector()
+	tempBrowser.Url = vc.Url
 
 	for ; i < BrowserCount; i++ {
-		BrowserList = append(BrowserList, tempBrowser)
+		BrowserList = append(BrowserList, &BrowserConfig{*tempBrowser})
 	}
 	return BrowserList
 }

@@ -5,11 +5,15 @@ go_library(
     srcs = [
         "config.go",
         "default.go",
+        "extract_config.go",
     ],
     importpath = "github.com/googleinterns/aso_sxs_viewer/config",
     visibility = ["//visibility:public"],
     deps = [
         "//proto:go_default_library",
+        "@com_github_jezek_xgb//:go_default_library",
+        "@com_github_jezek_xgb//randr:go_default_library",
+        "@com_github_jezek_xgb//xproto:go_default_library",
         "@org_golang_google_protobuf//encoding/prototext:go_default_library",
     ],
 )

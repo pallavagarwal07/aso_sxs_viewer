@@ -32,8 +32,6 @@ var (
 		Selector: "",
 		Position: 0,
 	}
-	OverrideURL = ""
-	UserDataDir = ""
 
 	BrowserWindowExample = `# You may use the template below to add window_overrides	
 #	window_overrides: {

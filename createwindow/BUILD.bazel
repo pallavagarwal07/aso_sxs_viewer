@@ -12,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//command:go_default_library",
+        "//config:go_default_library",
         "@com_github_chromedp_chromedp//:go_default_library",
         "@com_github_jezek_xgb//:go_default_library",
         "@com_github_jezek_xgb//randr:go_default_library",

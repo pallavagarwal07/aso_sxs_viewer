@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/googleinterns/aso_sxs_viewer/config"
 	"github.com/googleinterns/aso_sxs_viewer/createwindow"
 	"github.com/googleinterns/aso_sxs_viewer/event"
 
@@ -20,7 +21,7 @@ func main() {
 
 	viewerConfig, err := config.GetConfig()
 	if err != nil {
-		errorHandler(err)
+		event.ErrorHandler(err)
 	}
 
 	session, err := createwindow.Setup(viewerConfig)

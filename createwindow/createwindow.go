@@ -14,9 +14,9 @@ import (
 
 	"sync"
 
-	"../command"
-	"../config"
 	"github.com/chromedp/chromedp"
+	"github.com/googleinterns/aso_sxs_viewer/command"
+	"github.com/googleinterns/aso_sxs_viewer/config"
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/randr"
 	"github.com/jezek/xgb/xproto"
@@ -24,8 +24,6 @@ import (
 
 const (
 	chromeConnTimeout = 30
-	// will be removed once config is used.
-	URL = "https://mail.google.com"
 )
 
 // Session contains all information that will be needed by main.
@@ -108,7 +106,6 @@ func (s *Session) GetBrowserInputBarFocus() bool {
 
 func (s *Session) InitializeChromeWindows(browserList []config.BrowserConfig, cmdList []command.ExternalCommand, cmdErrorHandler func(err error) error) error {
 	//TODO initialize just one window to login and use it to login to all windows
-
 	for i := 0; i < len(browserList); i++ {
 		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler)
 	}
@@ -164,9 +161,9 @@ type Layout struct {
 
 func WindowsLayout(screenInfo *xproto.ScreenInfo, inputOrientation string, n int) (chromeLayouts []Layout, inputwindow Layout) {
 	var yShift uint32
-	heightScreen := 0.8 * float64(screenInfo.HeightInPixels)
+	heightScreen := 0.85 * float64(screenInfo.HeightInPixels)
 	widthScreen := screenInfo.WidthInPixels
-	inputwindow.h, inputwindow.w = uint16(0.2*float64(screenInfo.HeightInPixels)), uint16(widthScreen)
+	inputwindow.h, inputwindow.w = uint16(0.15*float64(screenInfo.HeightInPixels)), uint16(widthScreen)
 
 	if inputOrientation == "TOP" {
 		inputwindow.y = 0
@@ -260,7 +257,6 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 	if err != nil {
 		return err
 	}
-	// s.appendChromeList(ChromeWindow{programstate, nil})
 	s.RootWin = RootWindow{programstate}
 
 	for {

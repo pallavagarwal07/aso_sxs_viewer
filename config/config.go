@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"../proto"
+	"github.com/googleinterns/aso_sxs_viewer/proto"
 	"google.golang.org/protobuf/encoding/prototext"
 )
 

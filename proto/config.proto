@@ -1,6 +1,8 @@
 syntax = "proto2";
 package proto;
 
+option go_package = "github.com/googleinterns/aso_sxs_viewer/proto";
+
 message ViewerConfig {
     optional int32 browser_window_count = 1;
     optional CSSSelector css_selector = 2; //search bar selector

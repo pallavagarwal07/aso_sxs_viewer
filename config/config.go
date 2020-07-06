@@ -51,15 +51,30 @@ func createOrValidateConfig(filePath string) (*ViewerConfig, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		viewerConfig, err := generateDefaultConfig(filePath)
+		if err != nil {
+			return nil, err
+		}
+		marshalOpts := prototext.MarshalOptions{Multiline: true, Indent: "\t"}
+		out, err := marshalOpts.Marshal(viewerConfig)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to encode aso_sxs_viewer config %s", err)
+		}
+		out = append(out, []byte(BrowserWindowExample)...)
+		if err := ioutil.WriteFile(filePath, out, 0644); err != nil {
+			return nil, fmt.Errorf("Failed to write aso_sxs_viewer config %s", err)
+		}
+
 		defer file.Close()
-		return generateConfig(filePath)
+		return &ViewerConfig{*viewerConfig}, nil
 	} else if err != nil {
 		return nil, err
 	}
 	return validateConfig(filePath)
 }
 
-func generateConfig(configPath string) (*ViewerConfig, error) {
+func generateDefaultConfig(configPath string) (*proto.ViewerConfig, error) {
 	viewerConfig := &proto.ViewerConfig{}
 
 	viewerConfig.Url = &DefaultURL
@@ -80,22 +95,11 @@ func generateConfig(configPath string) (*ViewerConfig, error) {
 	viewerConfig.RootWindowConfig = &proto.RootWindowConfig{
 		Layout: rootWindowLayout,
 	}
-
-	marshalOpts := prototext.MarshalOptions{Multiline: true, Indent: "\t"}
-	out, err := marshalOpts.Marshal(viewerConfig)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to encode aso_sxs_viewer config %s", err)
-	}
-	out = append(out, []byte(BrowserWindowExample)...)
-	if err := ioutil.WriteFile(configPath, out, 0644); err != nil {
-		return nil, fmt.Errorf("Failed to write aso_sxs_viewer config %s", err)
-	}
-	return &ViewerConfig{*viewerConfig}, nil
+	return viewerConfig, nil
 }
 
-// validateConfig validate the given configFile. Any assumptions made to handle essential empty fields are written back to the config file.
+// validateConfig validates the given configFile.
 func validateConfig(configPath string) (*ViewerConfig, error) {
-	var writeChanges bool
 	in, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read aso_sxs_viewer config %s", err)
@@ -113,29 +117,21 @@ func validateConfig(configPath string) (*ViewerConfig, error) {
 
 	if viewerConfig.BrowserWindowCount == nil {
 		viewerConfig.BrowserWindowCount = &DefaultBrowserCount
-		writeChanges = true
 	} else if viewerConfig.GetBrowserWindowCount() <= 0 {
 		return nil, fmt.Errorf("A positive browser_window_count field is required in the config.textproto file")
 	}
 
-	// If both the CSSSelector and url are nil, try to populate them using the first WindowOverrides
-	// Otherwise use the populate them using the default values.
-	// If only one of the fields is non nil throw an error.
-	if CSSSelector, url := viewerConfig.GetCssSelector().GetSelector(), viewerConfig.GetUrl(); CSSSelector == "" && url == "" {
-		if windowsOverrides := viewerConfig.GetWindowOverrides(); windowsOverrides != nil && windowsOverrides[0].GetCssSelector().GetSelector() != "" && windowsOverrides[0].GetUrl() != "" {
-			url = windowsOverrides[0].GetUrl()
-			viewerConfig.Url = &url
-			viewerConfig.CssSelector = windowsOverrides[0].GetCssSelector()
-		} else {
-			viewerConfig.Url = &DefaultURL
-			viewerConfig.CssSelector = &proto.CSSSelector{
-				Selector: &DefaultCSSSelector.Selector,
-				Position: &DefaultCSSSelector.Position,
+	// If either the CSSSelector and url are nil, we try to iterate through the overriden windows to check
+	// if they have a missing field which does not have a default value, and throw an error if such a window is found.
+	if CSSSelector, url := viewerConfig.GetCssSelector().GetSelector(), viewerConfig.GetUrl(); CSSSelector == "" || url == "" {
+		for _, windowsOverride := range viewerConfig.GetWindowOverrides() {
+			if url == "" && windowsOverride.GetUrl() == "" {
+				return nil, fmt.Errorf("A empty css_selector or url found, try populating the default values in the config.textproto file and try again")
+			}
+			if CSSSelector == "" && windowsOverride.GetCssSelector().GetSelector() == "" {
+				return nil, fmt.Errorf("A empty css_selector or url found, try populating the default values in the config.textproto file and try again")
 			}
 		}
-		writeChanges = true
-	} else if CSSSelector == "" || url == "" {
-		return nil, fmt.Errorf("A empty css_selector or url found, populate them in the config.textproto file and try again")
 	}
 
 	if rootWindow := viewerConfig.GetRootWindowConfig(); rootWindow != nil {
@@ -146,17 +142,6 @@ func validateConfig(configPath string) (*ViewerConfig, error) {
 			if layout.GetWidth() < 0 || layout.GetHeight() < 0 {
 				return nil, fmt.Errorf("Invalid height or width in root_window_config layout, a non-negative int is expected in the config.textproto file")
 			}
-		}
-	}
-
-	if writeChanges {
-		marshalOpts := prototext.MarshalOptions{Multiline: true, Indent: "\t"}
-		out, err := marshalOpts.Marshal(viewerConfig)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to encode aso_sxs_viewer config %s", err)
-		}
-		if err := ioutil.WriteFile(configPath, out, 0644); err != nil {
-			return nil, fmt.Errorf("Failed to write aso_sxs_viewer config %s", err)
 		}
 	}
 	return &ViewerConfig{*viewerConfig}, nil

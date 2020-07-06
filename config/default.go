@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -12,6 +13,7 @@ import (
 var (
 	AsoSxSViewerDir    = filepath.Join(os.Getenv("HOME"), ".aso_sxs_viewer")
 	AsoSxSViewerConfig = filepath.Join(AsoSxSViewerDir, "config.textproto")
+	DefaultURL         = "https://mail.google.com/"
 	DefaultCSSSelector = struct {
 		Selector string
 		Position int32
@@ -19,28 +21,20 @@ var (
 		Selector: "input",
 		Position: 7,
 	}
-	DefaultURL               = "https://mail.google.com/"
 	DefaultBrowserCount      = int32(2)
 	DefaultUseCookies        = false
 	DefaultUserDataDirPrefix = filepath.Join(AsoSxSViewerDir, "profiles")
 	DefaultRootWindowWidth   = int32(1600)
 	DefaultRootWindowHeight  = int32(900)
-	OverrideCSSSelector      = struct {
-		Selector string
-		Position int32
-	}{
-		Selector: "",
-		Position: 0,
-	}
 
-	BrowserWindowExample = `# You may use the template below to add window_overrides	
+	BrowserWindowExample = fmt.Sprintf(`# You may use the template below to add window_overrides	
 #	window_overrides: {
+#		url: "%s"
 #		css_selector: {
-#			selector: ""
-#			position: 0
+#			selector: "%s"
+#			position: %d
 #		}
-#		url: ""
-#	}`
+#	}`, DefaultURL, DefaultCSSSelector.Selector, DefaultCSSSelector.Position)
 )
 
 func DefaultRootWindowSize() (width, height uint16) {

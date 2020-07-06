@@ -5,23 +5,22 @@ option go_package = "github.com/googleinterns/aso_sxs_viewer/proto";
 
 message ViewerConfig {
     optional int32 browser_window_count = 1;
-    optional CSSSelector css_selector = 2; //search bar selector
-    optional string url = 3;
-    optional bool use_cookies = 4;
-    optional string user_data_dir_prefix = 5;
-    repeated BrowserConfig window_overrides = 6;
+    optional string url = 2;
+    optional CSSSelector css_selector = 3; //search bar selector
+    optional string user_data_dir_prefix = 4;
+    repeated BrowserConfig window_overrides = 5;
     enum WindowPosition {
-        BOTTOM = 0; //default
+        DEFAULT_BOTTOM = 0;
         TOP = 1; 
     }
 
-    optional WindowPosition input_window_position = 7;
+    optional WindowPosition input_window_position = 6;
     // RootWindowConfig is used only for grouping windows in X based systems.
     optional RootWindowConfig root_window_config = 15;
 }
 message BrowserConfig {
-    optional CSSSelector css_selector = 1;
-    optional string url = 2;
+    optional string url = 1;
+    optional CSSSelector css_selector = 2;
 }
 message CSSSelector {
     optional string selector = 1;

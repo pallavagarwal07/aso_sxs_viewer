@@ -297,7 +297,7 @@ func DefaultRootWindowSize() (height, width uint16) {
 }
 
 // Setup opens all windows and establishes connection with the x server.
-func Setup(viewerConfig config.ViewerConfig) (*Session, error) {
+func Setup(viewerConfig *config.ViewerConfig) (*Session, error) {
 	debuggingport := 9222
 	var displayString string
 	browserCount := viewerConfig.GetBrowserCount()

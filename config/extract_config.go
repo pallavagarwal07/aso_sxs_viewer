@@ -7,18 +7,18 @@ func min(a, b int) int {
 	return b
 }
 
-func (vc ViewerConfig) GetBrowserCount() int {
+func (vc *ViewerConfig) GetBrowserCount() int {
 	return int(vc.GetBrowserWindowCount())
 }
 
-func (vc ViewerConfig) GetInputWindowOrientation() string {
+func (vc *ViewerConfig) GetInputWindowOrientation() string {
 	if vc.GetInputWindowPosition() == 0 {
 		return "BOTTOM"
 	}
 	return "TOP"
 }
 
-func (vc ViewerConfig) GetRootWindowLayout() (x, y uint32, w, h uint16) {
+func (vc *ViewerConfig) GetRootWindowLayout() (x, y uint32, w, h uint16) {
 	layout := vc.GetRootWindowConfig().GetLayout()
 	x, y = uint32(layout.GetX()), uint32(layout.GetY())
 	w, h = uint16(layout.GetWidth()), uint16(layout.GetHeight())
@@ -35,14 +35,14 @@ func (vc ViewerConfig) GetRootWindowLayout() (x, y uint32, w, h uint16) {
 	return
 }
 
-func (vc ViewerConfig) GetUserDataDirPath() string {
+func (vc *ViewerConfig) GetUserDataDirPath() string {
 	if prefix := vc.GetUserDataDirPrefix(); prefix != "" {
 		return prefix
 	}
 	return DefaultUserDataDirPrefix
 }
 
-func (vc ViewerConfig) GetBrowserConfigList() []BrowserConfig {
+func (vc *ViewerConfig) GetBrowserConfigList() []BrowserConfig {
 	windowsOverrides := vc.GetWindowOverrides()
 	BrowserCount := vc.GetBrowserCount()
 	var BrowserList []BrowserConfig

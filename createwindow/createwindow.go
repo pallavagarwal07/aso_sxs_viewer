@@ -30,11 +30,12 @@ const (
 
 // Session contains all information that will be needed by main.
 type Session struct {
-	mu         sync.Mutex
-	X          *xgb.Conn
-	InputWin   InputWindow
-	RootWin    RootWindow
-	ChromeList []ChromeWindow
+	mu                   sync.Mutex
+	X                    *xgb.Conn
+	InputWin             InputWindow
+	RootWin              RootWindow
+	ChromeList           []ChromeWindow
+	browserInputBarFocus Focus
 }
 
 type ChromeWindow struct {
@@ -52,6 +53,11 @@ type RootWindow struct {
 type CSSSelector struct {
 	Selector string
 	Position int
+}
+
+type Focus struct {
+	isFocussed bool
+	mu         sync.Mutex
 }
 
 func (s *Session) appendChromeList(chromeWin ChromeWindow) {
@@ -85,6 +91,19 @@ func (p *ChromeWindow) ToClose() bool {
 
 func (p *InputWindow) Quit() {
 	p.Conn.Close()
+}
+
+func (s *Session) SetBrowserInputBarFocus(isFocussed bool) {
+	s.browserInputBarFocus.mu.Lock()
+	defer s.browserInputBarFocus.mu.Unlock()
+	s.browserInputBarFocus.isFocussed = isFocussed
+}
+
+func (s *Session) GetBrowserInputBarFocus() bool {
+	s.browserInputBarFocus.mu.Lock()
+	defer s.browserInputBarFocus.mu.Unlock()
+	isfocussed := s.browserInputBarFocus.isFocussed
+	return isfocussed
 }
 
 func (s *Session) InitializeChromeWindow(cmd command.ExternalCommand,

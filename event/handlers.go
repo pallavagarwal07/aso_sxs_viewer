@@ -3,7 +3,6 @@ package event
 import (
 	"fmt"
 	"log"
-	"sync"
 
 	"github.com/googleinterns/aso_sxs_viewer/chrometool"
 	"github.com/googleinterns/aso_sxs_viewer/createwindow"
@@ -11,17 +10,11 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-type Focus struct {
-	isFocussed bool
-	mu         sync.Mutex
-}
-
-var focus Focus
-
 func KeyPressHandler(session *createwindow.Session, event *xproto.KeyPressEvent) error {
 	str, mods := keybinding.InterpretKeyPressEvent(session.X, keybinding.KeyPressEvent{event})
-	isFocussed := focus.getFocus()
-	defer focus.setFocus(true)
+
+	isFocussed := session.GetBrowserInputBarFocus()
+	defer session.SetBrowserInputBarFocus(true)
 
 	for _, browser := range session.ChromeList {
 		go func(browser createwindow.ChromeWindow) {
@@ -42,7 +35,7 @@ func MapNotifyHandler(session *createwindow.Session) error {
 }
 
 func EnterNotifyHandler(session *createwindow.Session) error {
-	focus.setFocus(false)
+	session.SetBrowserInputBarFocus(false)
 	cookie := xproto.GrabKeyboard(session.X, true, session.InputWin.Wid, xproto.TimeCurrentTime, xproto.GrabModeAsync, xproto.GrabModeAsync)
 	if _, err := cookie.Reply(); err != nil {
 		return err
@@ -68,17 +61,4 @@ func UnmapNotifyHandler(session *createwindow.Session) {
 func ErrorHandler(err error) {
 	fmt.Println("error handler is to be implemented")
 	log.Println(err)
-}
-
-func (f *Focus) setFocus(isfocussed bool) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.isFocussed = isfocussed
-}
-
-func (f *Focus) getFocus() bool {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	isfocussed := f.isFocussed
-	return isfocussed
 }

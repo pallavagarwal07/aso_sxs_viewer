@@ -252,7 +252,7 @@ func (s *Session) CreateXephyrWindow(layout Layout, display int, cmdErrorHandler
 		if !os.IsNotExist(err) {
 			break
 		}
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 	return nil
 }

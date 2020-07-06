@@ -2,3 +2,4 @@ bazel-aso_sxs_viewer
 bazel-bin
 bazel-out
 bazel-testlogs
+*.pb.go

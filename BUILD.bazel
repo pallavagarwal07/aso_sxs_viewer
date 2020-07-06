@@ -13,7 +13,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//createwindow:go_default_library",
-        "//keybinding:go_default_library",
+        "//event:go_default_library",
         "@com_github_jezek_xgb//xproto:go_default_library",
     ],
 )

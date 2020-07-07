@@ -12,10 +12,6 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-const (
-	chromeWindowNumber = 2
-)
-
 func main() {
 	rand.Seed(time.Now().Unix())
 

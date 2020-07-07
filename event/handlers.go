@@ -17,7 +17,7 @@ func KeyPressHandler(session *createwindow.Session, event *xproto.KeyPressEvent)
 	for _, browser := range session.ChromeList {
 		go func(browser createwindow.ChromeWindow) {
 			if err := chrometool.DispatchKeyEventToBrowser(browser.Ctx, chrometool.CSSSelector(browser.InputFieldSelector), str, mods, isFocussed); err != nil {
-				ErrorHandler(err)
+				ErrorHandler(err, false)
 			}
 		}(browser)
 	}
@@ -61,7 +61,13 @@ func UnmapNotifyHandler(session *createwindow.Session) {
 	session.ForceQuit()
 }
 
-func ErrorHandler(err error) {
-	fmt.Println("error handler is to be implemented")
-	log.Println(err)
+func ErrorHandler(err error, isFatal bool) {
+	createwindow.DisplayError(err, PrintError, isFatal)
+}
+
+func PrintError(err error) error {
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }

@@ -17,17 +17,17 @@ func main() {
 
 	viewerConfig, err := config.GetConfig()
 	if err != nil {
-		event.ErrorHandler(err)
+		event.ErrorHandler(err, true)
 	}
 
 	session, err := createwindow.Setup(viewerConfig)
 	if err != nil {
-		event.ErrorHandler(err)
+		event.ErrorHandler(err, true)
 		return
 	}
 
 	if err := event.MapNotifyHandler(session); err != nil {
-		event.ErrorHandler(err)
+		event.ErrorHandler(err, true)
 		return
 	}
 
@@ -38,12 +38,12 @@ func eventLoop(session *createwindow.Session) {
 	for {
 		ev, err := session.X.WaitForEvent()
 		if err != nil {
-			event.ErrorHandler(err)
+			event.ErrorHandler(err, false)
 			continue
 		}
 
 		if ev == nil {
-			fmt.Println("connection interrupted")
+			event.ErrorHandler(fmt.Errorf("connection interrupted"), true)
 			session.ForceQuit()
 			return
 		}
@@ -55,18 +55,18 @@ func eventLoop(session *createwindow.Session) {
 
 		case xproto.MapNotifyEvent:
 			if err := event.MapNotifyHandler(session); err != nil {
-				event.ErrorHandler(err)
+				event.ErrorHandler(err, true)
 				return
 			}
 
 		case xproto.EnterNotifyEvent:
 			if err := event.EnterNotifyHandler(session); err != nil {
-				event.ErrorHandler(err)
+				event.ErrorHandler(err, false)
 			}
 
 		case xproto.LeaveNotifyEvent:
 			if err := event.LeaveNotifyHandler(session); err != nil {
-				event.ErrorHandler(err)
+				event.ErrorHandler(err, false)
 			}
 
 		case xproto.UnmapNotifyEvent:

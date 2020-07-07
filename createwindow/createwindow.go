@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"sync"
@@ -107,12 +109,12 @@ func (s *Session) GetBrowserInputBarFocus() bool {
 func (s *Session) InitializeChromeWindows(browserList []*config.BrowserConfig, cmdList []command.ExternalCommand, cmdErrorHandler func(err error) error) error {
 	//TODO initialize just one window to login and use it to login to all windows
 	for i := 0; i < len(browserList); i++ {
-		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler)
+		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler, i)
 	}
 	return nil
 }
 
-func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) error {
+func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error, i int) error {
 	chromeWindow, err := CreateChromeWindow(browserConfig, cmd, cmdErrorHandler)
 	if err != nil {
 		log.Println(err)
@@ -123,7 +125,6 @@ func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cm
 		log.Println(err)
 		return err
 	}
-
 	s.appendChromeList(chromeWindow)
 	return nil
 }
@@ -150,6 +151,24 @@ func SetupChrome(chromeWindow ChromeWindow, URL string) error {
 		return err
 	}
 	// TODO: use cookies to login if user allows.
+	return nil
+}
+func DisableCrashedBubble(s string) error {
+	filepath := fmt.Sprintf("%s/Default/Preferences", s)
+	fmt.Println(filepath)
+	_, err := os.Stat(filepath)
+	if os.IsNotExist(err) {
+		fmt.Println("preferences file does not exist, no changes to be made")
+		return nil
+	}
+	read, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return err
+	}
+	newContents := strings.Replace(string(read), "\"exit_type\":\"Crashed\"", "\"exit_type\":\"Normal\"", -1)
+	if err = ioutil.WriteFile(filepath, []byte(newContents), 0); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -336,6 +355,9 @@ func Setup(viewerConfig *config.ViewerConfig) (*Session, error) {
 	for i := 1; i <= browserCount; i++ {
 		cmd := ChromeCommand(chromeLayouts[i-1], fmt.Sprintf("%s/dir%d", userDataDirPath, i), displayString, debuggingport+i)
 		cmdList = append(cmdList, cmd)
+		if err = DisableCrashedBubble(fmt.Sprintf("%s/dir%d", userDataDirPath, i)); err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	browserList := viewerConfig.GetBrowserConfigList()

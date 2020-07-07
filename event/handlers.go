@@ -22,7 +22,7 @@ func KeyPressHandler(session *createwindow.Session, event *xproto.KeyPressEvent)
 		}(browser)
 	}
 
-	if str == "Return" {
+	if str != "Return" {
 		session.SetBrowserInputBarFocus(true)
 	} else {
 		session.SetBrowserInputBarFocus(false)

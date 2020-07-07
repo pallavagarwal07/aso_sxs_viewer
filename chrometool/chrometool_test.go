@@ -176,7 +176,7 @@ func mockChrome(t *testing.T, addr string, logFile string, portCh chan string) {
 			// The delay here is intentional to avoid race conditions that chromedp sometimes encounters
 			// removing this may lead test to hang and timeout
 			// TODO: ensure prevention of such race conditions at upstream
-			time.Sleep(1 * time.Millisecond)
+			time.Sleep(5 * time.Millisecond)
 			wsutil.WriteMessage(conn, ws.StateServerSide, op, serverData)
 		}
 	}

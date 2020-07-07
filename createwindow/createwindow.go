@@ -154,19 +154,18 @@ func SetupChrome(chromeWindow ChromeWindow, URL string) error {
 	return nil
 }
 func DisableCrashedBubble(s string) error {
-	filepath := fmt.Sprintf("%s/Default/Preferences", s)
-	fmt.Println(filepath)
-	_, err := os.Stat(filepath)
+	fmt.Println(s)
+	_, err := os.Stat(s)
 	if os.IsNotExist(err) {
 		fmt.Println("preferences file does not exist, no changes to be made")
 		return nil
 	}
-	read, err := ioutil.ReadFile(filepath)
+	read, err := ioutil.ReadFile(s)
 	if err != nil {
 		return err
 	}
 	newContents := strings.Replace(string(read), "\"exit_type\":\"Crashed\"", "\"exit_type\":\"Normal\"", -1)
-	if err = ioutil.WriteFile(filepath, []byte(newContents), 0); err != nil {
+	if err = ioutil.WriteFile(s, []byte(newContents), 0644); err != nil {
 		return err
 	}
 	return nil
@@ -355,7 +354,7 @@ func Setup(viewerConfig *config.ViewerConfig) (*Session, error) {
 	for i := 1; i <= browserCount; i++ {
 		cmd := ChromeCommand(chromeLayouts[i-1], fmt.Sprintf("%s/dir%d", userDataDirPath, i), displayString, debuggingport+i)
 		cmdList = append(cmdList, cmd)
-		if err = DisableCrashedBubble(fmt.Sprintf("%s/dir%d", userDataDirPath, i)); err != nil {
+		if err = DisableCrashedBubble(fmt.Sprintf("%s/dir%d/Default/Preferences", userDataDirPath, i)); err != nil {
 			fmt.Println(err)
 		}
 	}

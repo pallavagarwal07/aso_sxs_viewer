@@ -12,9 +12,7 @@ import (
 
 func KeyPressHandler(session *createwindow.Session, event *xproto.KeyPressEvent) error {
 	str, mods := keybinding.InterpretKeyPressEvent(session.X, keybinding.KeyPressEvent{event})
-
 	isFocussed := session.GetBrowserInputBarFocus()
-	defer session.SetBrowserInputBarFocus(true)
 
 	for _, browser := range session.ChromeList {
 		go func(browser createwindow.ChromeWindow) {
@@ -24,6 +22,11 @@ func KeyPressHandler(session *createwindow.Session, event *xproto.KeyPressEvent)
 		}(browser)
 	}
 
+	if str == "Return" {
+		session.SetBrowserInputBarFocus(true)
+	} else {
+		session.SetBrowserInputBarFocus(false)
+	}
 	return nil
 }
 

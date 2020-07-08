@@ -24,18 +24,14 @@ func ChromeCommand(layout Layout, userdatadir, display string, debuggingPort int
 }
 
 func DisplayError(err error, cmdErrorHandler func(err error) error, isFatal bool) error {
-	var icon string
+	icon := "caution"
 	if isFatal {
 		icon = "stop"
-	} else {
-		icon = "caution"
 	}
 
 	applescript := command.ExternalCommand{
 		Path: "osascript",
-		Arg: []string{"-e",
-			fmt.Sprintf("display dialog \"%s\" with icon %s", err, icon),
-		},
+		Arg:  []string{"-e", fmt.Sprintf("display dialog %q with icon %s", err.Error(), icon)},
 	}
 	if _, err := command.ExecuteProgram(applescript, cmdErrorHandler); err != nil {
 		log.Println(err)

@@ -107,14 +107,13 @@ func (s *Session) GetBrowserInputBarFocus() bool {
 }
 
 func (s *Session) InitializeChromeWindows(browserList []*config.BrowserConfig, cmdList []command.ExternalCommand, cmdErrorHandler func(err error) error) error {
-	//TODO initialize just one window to login and use it to login to all windows
 	for i := 0; i < len(browserList); i++ {
-		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler, i)
+		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler)
 	}
 	return nil
 }
 
-func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error, i int) error {
+func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cmd command.ExternalCommand, cmdErrorHandler func(err error) error) error {
 	chromeWindow, err := CreateChromeWindow(browserConfig, cmd, cmdErrorHandler)
 	if err != nil {
 		log.Println(err)

@@ -38,7 +38,7 @@ func TestDisableCrashedBubble(t *testing.T) {
 		t.Errorf("Encountered error %s in reading test file", err)
 	}
 
-	isReplaced := strings.Contains(string(newtmpfile), "\"exit_type\":\"Normal\"") && !strings.Contains(string(newtmpfile), "\"exit_type\":\"Crashed\"")
+	isReplaced := strings.Contains(string(newtmpfile), `"exit_type":"Normal"`) && !strings.Contains(string(newtmpfile), `"exit_type":"Crashed"`)
 	if !isReplaced {
 		t.Errorf("Encountered error in replacing string")
 	}

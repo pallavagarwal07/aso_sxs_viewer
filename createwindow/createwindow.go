@@ -150,25 +150,19 @@ func SetupChrome(chromeWindow ChromeWindow, URL string) error {
 	if err := chromedp.Run(chromeWindow.Ctx, chromedp.Navigate(URL)); err != nil {
 		return err
 	}
-	// TODO: use cookies to login if user allows.
 	return nil
 }
 func DisableCrashedBubble(s string) error {
-	fmt.Println(s)
-	_, err := os.Stat(s)
+	fileinfo, err := os.Stat(s)
 	if os.IsNotExist(err) {
-		fmt.Println("preferences file does not exist, no changes to be made")
 		return nil
 	}
 	read, err := ioutil.ReadFile(s)
 	if err != nil {
 		return err
 	}
-	newContents := strings.Replace(string(read), "\"exit_type\":\"Crashed\"", "\"exit_type\":\"Normal\"", -1)
-	if err = ioutil.WriteFile(s, []byte(newContents), 0644); err != nil {
-		return err
-	}
-	return nil
+	newContents := strings.Replace(string(read), `"exit_type":"Crashed"`, `"exit_type":"Normal"`, -1)
+	return ioutil.WriteFile(s, []byte(newContents), fileinfo.Mode())
 }
 
 // Layout has the x , y coordinates of top left corner and width and height of window.

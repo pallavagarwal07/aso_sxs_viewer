@@ -3,11 +3,16 @@ package createwindow
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 )
 
 func TestDisableCrashedBubble(t *testing.T) {
-	content := []byte("\"exit_type\":\"Crashed\"")
+	content, err := ioutil.ReadFile("testfiles/testdata.txt")
+
+	if err != nil {
+		t.Errorf("Encountered error %s in reading test file", err)
+	}
 
 	tmpfile, err := ioutil.TempFile("", "tempfile")
 	if err != nil {
@@ -23,7 +28,19 @@ func TestDisableCrashedBubble(t *testing.T) {
 	}
 
 	if err := DisableCrashedBubble(tmpfile.Name()); err != nil {
-		t.Errorf("Encountered error %s in DisableCrashedBubble", err)
+		{
+			t.Errorf("Encountered error %s in DisableCrashedBubble", err)
+		}
+	}
+
+	newtmpfile, err := ioutil.ReadFile(tmpfile.Name())
+	if err != nil {
+		t.Errorf("Encountered error %s in reading test file", err)
+	}
+
+	isReplaced := strings.Contains(string(newtmpfile), "\"exit_type\":\"Normal\"") && !strings.Contains(string(newtmpfile), "\"exit_type\":\"Crashed\"")
+	if !isReplaced {
+		t.Errorf("Encountered error in replacing string")
 	}
 	os.Remove(tmpfile.Name())
 }

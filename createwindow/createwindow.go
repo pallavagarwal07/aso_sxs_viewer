@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"sync"
@@ -105,7 +107,6 @@ func (s *Session) GetBrowserInputBarFocus() bool {
 }
 
 func (s *Session) InitializeChromeWindows(browserList []*config.BrowserConfig, cmdList []command.ExternalCommand, cmdErrorHandler func(err error) error) error {
-	//TODO initialize just one window to login and use it to login to all windows
 	for i := 0; i < len(browserList); i++ {
 		go s.initializeChromeWindow(browserList[i], cmdList[i], cmdErrorHandler)
 	}
@@ -123,7 +124,6 @@ func (s *Session) initializeChromeWindow(browserConfig *config.BrowserConfig, cm
 		log.Println(err)
 		return err
 	}
-
 	s.appendChromeList(chromeWindow)
 	return nil
 }
@@ -149,8 +149,19 @@ func SetupChrome(chromeWindow ChromeWindow, URL string) error {
 	if err := chromedp.Run(chromeWindow.Ctx, chromedp.Navigate(URL)); err != nil {
 		return err
 	}
-	// TODO: use cookies to login if user allows.
 	return nil
+}
+func DisableCrashedBubble(s string) error {
+	fileinfo, err := os.Stat(s)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	read, err := ioutil.ReadFile(s)
+	if err != nil {
+		return err
+	}
+	newContents := strings.Replace(string(read), `"exit_type":"Crashed"`, `"exit_type":"Normal"`, -1)
+	return ioutil.WriteFile(s, []byte(newContents), fileinfo.Mode())
 }
 
 // Layout has the x , y coordinates of top left corner and width and height of window.
@@ -336,6 +347,9 @@ func Setup(viewerConfig *config.ViewerConfig) (*Session, error) {
 	for i := 1; i <= browserCount; i++ {
 		cmd := ChromeCommand(chromeLayouts[i-1], fmt.Sprintf("%s/dir%d", userDataDirPath, i), displayString, debuggingport+i)
 		cmdList = append(cmdList, cmd)
+		if err = DisableCrashedBubble(fmt.Sprintf("%s/dir%d/Default/Preferences", userDataDirPath, i)); err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	browserList := viewerConfig.GetBrowserConfigList()

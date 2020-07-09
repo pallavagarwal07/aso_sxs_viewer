@@ -3,8 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "chrome.go",
         "createwindow.go",
         "inputwindow.go",
+        "setup.go",
         "window_darwin.go",
         "window_linux.go",
     ],
@@ -15,7 +17,6 @@ go_library(
         "//config:go_default_library",
         "@com_github_chromedp_chromedp//:go_default_library",
         "@com_github_jezek_xgb//:go_default_library",
-        "@com_github_jezek_xgb//randr:go_default_library",
         "@com_github_jezek_xgb//xproto:go_default_library",
     ],
 )
@@ -23,8 +24,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-       "createwindow_test.go",
-       "window_test.go",
+        "createwindow_test.go",
+        "window_test.go",
     ],
     data = glob(["testfiles/**"]),
     embed = [":go_default_library"],

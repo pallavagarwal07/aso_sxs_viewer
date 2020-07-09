@@ -12,26 +12,22 @@ import (
 	"github.com/jezek/xgb/xproto"
 )
 
-const (
-	chromeWindowNumber = 2
-)
-
 func main() {
 	rand.Seed(time.Now().Unix())
 
 	viewerConfig, err := config.GetConfig()
 	if err != nil {
-		event.ErrorHandler(err)
+		event.DisplayFatalError(err)
 	}
 
 	session, err := createwindow.Setup(viewerConfig)
 	if err != nil {
-		event.ErrorHandler(err)
+		event.DisplayFatalError(err)
 		return
 	}
 
 	if err := event.MapNotifyHandler(session); err != nil {
-		event.ErrorHandler(err)
+		event.DisplayFatalError(err)
 		return
 	}
 
@@ -42,12 +38,12 @@ func eventLoop(session *createwindow.Session) {
 	for {
 		ev, err := session.X.WaitForEvent()
 		if err != nil {
-			event.ErrorHandler(err)
+			event.DisplayWarning(err)
 			continue
 		}
 
 		if ev == nil {
-			fmt.Println("connection interrupted")
+			event.DisplayFatalError(fmt.Errorf("connection interrupted"))
 			session.ForceQuit()
 			return
 		}
@@ -59,18 +55,18 @@ func eventLoop(session *createwindow.Session) {
 
 		case xproto.MapNotifyEvent:
 			if err := event.MapNotifyHandler(session); err != nil {
-				event.ErrorHandler(err)
+				event.DisplayFatalError(err)
 				return
 			}
 
 		case xproto.EnterNotifyEvent:
 			if err := event.EnterNotifyHandler(session); err != nil {
-				event.ErrorHandler(err)
+				event.DisplayWarning(err)
 			}
 
 		case xproto.LeaveNotifyEvent:
 			if err := event.LeaveNotifyHandler(session); err != nil {
-				event.ErrorHandler(err)
+				event.DisplayWarning(err)
 			}
 
 		case xproto.UnmapNotifyEvent:

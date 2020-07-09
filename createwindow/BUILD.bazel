@@ -22,7 +22,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["createwindow_test.go"],
+    srcs = [
+       "createwindow_test.go",
+       "window_test.go",
+    ],
     data = glob(["testfiles/**"]),
     embed = [":go_default_library"],
 )

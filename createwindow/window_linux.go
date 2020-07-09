@@ -28,23 +28,33 @@ func ChromeCommand(layout Layout, userdatadir, display string, debuggingPort int
 }
 
 func DisplayError(err error, cmdErrorHandler func(err error) error, isFatal bool) error {
-	messageType := "warning"
-	if isFatal {
-		messageType = "error"
+	if err == nil {
+		return nil
 	}
 
+	arg := displayErrorArg(err, isFatal)
 	zenity := command.ExternalCommand{
 		Path: "zenity",
-		Arg: []string{
-			fmt.Sprintf("--%s", messageType),
-			"--title", fmt.Sprintf("%s message", messageType),
-			"--text", fmt.Sprintf(`<span font= "14">%s</span>`, err),
-			"--width", "500",
-		},
+		Arg: arg,
 	}
 	if _, err := command.ExecuteProgram(zenity, cmdErrorHandler); err != nil {
 		log.Println(err)
 		return err
 	}
 	return nil
+}
+
+func displayErrorArg(err error, isFatal bool) []string {
+	messageType := "warning"
+	if isFatal {
+		messageType = "error"
+	}
+	
+	arg := []string{
+		fmt.Sprintf("--%s", messageType),
+		"--title", fmt.Sprintf("%s message", messageType),
+		"--text", fmt.Sprintf(`<span font= "14">%s</span>`, err),
+		"--width", "500",
+	}
+	return arg 
 }

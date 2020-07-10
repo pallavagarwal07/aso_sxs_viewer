@@ -1,7 +1,7 @@
 # Search Overlay Side by Side Viewer
 The viewer allows you to compare search-as-you-type results from multiple accounts/URLs side by side by querying them simultaneously. Assisting in comparing the results visually.
 
-<img src="https://github.com/googleinterns/aso_sxs_viewer/blob/master/googleandyoutubesearch.png">
+<img src="static/googleandyoutubesearch.png">
 
 
 

@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -9,16 +9,11 @@ go_library(
     importpath = "github.com/googleinterns/aso_sxs_viewer/virtualmouse",
     visibility = ["//visibility:private"],
     deps = [
-        "@com_github_burntsushi_xgb//:go_default_library",
-        "@com_github_burntsushi_xgb//xproto:go_default_library",
-        "@com_github_burntsushi_xgb//xtest:go_default_library",
+        "//command:go_default_library",
+        "@com_github_jezek_xgb//:go_default_library",
+        "@com_github_jezek_xgb//xproto:go_default_library",
+        "@com_github_jezek_xgb//xtest:go_default_library",
     ],
-)
-
-go_binary(
-    name = "virtualmouse",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
 )
 
 go_test(

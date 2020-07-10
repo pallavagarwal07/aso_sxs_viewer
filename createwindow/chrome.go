@@ -10,7 +10,7 @@ import (
 	"github.com/googleinterns/aso_sxs_viewer/config"
 )
 
-// SetupChrome
+// SetupChrome opens url in chrome broswer session
 func SetupChrome(chromeWindow ChromeWindow, URL string) error {
 	if err := chromedp.Run(chromeWindow.Ctx, chromedp.Navigate(URL)); err != nil {
 		return err

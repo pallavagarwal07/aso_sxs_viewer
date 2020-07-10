@@ -1,4 +1,4 @@
-package main
+package virtualmouse
 
 import (
 	"fmt"
@@ -6,7 +6,9 @@ import (
 )
 
 func TestMoveMouse(t *testing.T) {
-	a, err := EstablishConn(":3")
+	display := 1
+	CreateXephyrWindow(display)
+	a, err := EstablishConn(display)
 	if err != nil {
 		t.Errorf("Encountered error %s by EstablishConn()", err)
 	}

@@ -1,9 +1,12 @@
-package main
+package virtualmouse
 
 import (
-	"github.com/BurntSushi/xgb"
-	"github.com/BurntSushi/xgb/xproto"
-	"github.com/BurntSushi/xgb/xtest"
+	"fmt"
+
+	"github.com/googleinterns/aso_sxs_viewer/command"
+	"github.com/jezek/xgb"
+	"github.com/jezek/xgb/xproto"
+	"github.com/jezek/xgb/xtest"
 )
 
 type ConnInfo struct {
@@ -12,8 +15,9 @@ type ConnInfo struct {
 	Setup *xproto.SetupInfo
 }
 
-func EstablishConn(display string) (*ConnInfo, error) {
-	X, err := xgb.NewConnDisplay(display)
+func EstablishConn(display int) (*ConnInfo, error) {
+	displayString := fmt.Sprintf(":%d", display)
+	X, err := xgb.NewConnDisplay(displayString)
 	if err != nil {
 		return nil, err
 	}
@@ -41,4 +45,31 @@ func (c *ConnInfo) GetPointer() (int16, int16, error) {
 		return -1, -1, err
 	}
 	return p.WinX, p.WinY, nil
+}
+
+func CreateXephyrWindow(display int) error {
+	displayString := fmt.Sprintf(":%d", display)
+	xephyr := command.ExternalCommand{
+		Path: "xephyr",
+		Arg: []string{
+			displayString,
+			"-ac",
+			"-br",
+			"-screen",
+			"-reset",
+			"-no-host-grab",
+		},
+	}
+	_, err := command.ExecuteProgram(xephyr, cmdErrorHandler)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func cmdErrorHandler(err error) error {
+	if err != nil {
+		fmt.Printf("returned error %s, calling force quit", err.Error())
+	}
+	return err
 }

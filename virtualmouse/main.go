@@ -1,9 +1,9 @@
-package main
+package virtualmouse
 
 import "fmt"
 
 func main() {
-	c, err := EstablishConn(":3")
+	c, err := EstablishConn(0)
 	if err != nil {
 		fmt.Println(err)
 		return

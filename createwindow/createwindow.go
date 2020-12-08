@@ -17,8 +17,8 @@ import (
 	"sync"
 
 	"github.com/chromedp/chromedp"
-	"github.com/googleinterns/aso_sxs_viewer/command"
-	"github.com/googleinterns/aso_sxs_viewer/config"
+	"github.com/pallavagarwal07/aso_sxs_viewer/command"
+	"github.com/pallavagarwal07/aso_sxs_viewer/config"
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/randr"
 	"github.com/jezek/xgb/xproto"

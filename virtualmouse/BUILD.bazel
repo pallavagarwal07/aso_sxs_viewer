@@ -6,7 +6,7 @@ go_library(
         "fakeinput.go",
         "main.go",
     ],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/virtualmouse",
+    importpath = "github.com/pallavagarwal07/aso_sxs_viewer/virtualmouse",
     visibility = ["//visibility:private"],
     deps = [
         "@com_github_burntsushi_xgb//:go_default_library",

@@ -6,7 +6,7 @@ go_library(
         "chrometool.go",
         "encoding.go",
     ],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/chrometool",
+    importpath = "github.com/pallavagarwal07/aso_sxs_viewer/chrometool",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_chromedp_cdproto//cdp:go_default_library",

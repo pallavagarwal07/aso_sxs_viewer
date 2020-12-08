@@ -6,7 +6,7 @@ go_library(
         "command.go",
         "websocket.go",
     ],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/command",
+    importpath = "github.com/pallavagarwal07/aso_sxs_viewer/command",
     visibility = ["//visibility:public"],
 )
 

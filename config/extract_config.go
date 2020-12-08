@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/googleinterns/aso_sxs_viewer/proto"
+	"github.com/pallavagarwal07/aso_sxs_viewer/proto"
 )
 
 func min(a, b int) int {

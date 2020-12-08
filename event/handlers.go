@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/googleinterns/aso_sxs_viewer/chrometool"
-	"github.com/googleinterns/aso_sxs_viewer/createwindow"
-	"github.com/googleinterns/aso_sxs_viewer/keybinding"
+	"github.com/pallavagarwal07/aso_sxs_viewer/chrometool"
+	"github.com/pallavagarwal07/aso_sxs_viewer/createwindow"
+	"github.com/pallavagarwal07/aso_sxs_viewer/keybinding"
 	"github.com/jezek/xgb/xproto"
 )
 

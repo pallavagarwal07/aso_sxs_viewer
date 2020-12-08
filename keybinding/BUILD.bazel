@@ -6,7 +6,7 @@ go_library(
         "encoding.go",
         "keybinding.go",
     ],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/keybinding",
+    importpath = "github.com/pallavagarwal07/aso_sxs_viewer/keybinding",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_jezek_xgb//:go_default_library",

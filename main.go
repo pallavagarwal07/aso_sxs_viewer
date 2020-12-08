@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/googleinterns/aso_sxs_viewer/config"
-	"github.com/googleinterns/aso_sxs_viewer/createwindow"
-	"github.com/googleinterns/aso_sxs_viewer/event"
+	"github.com/pallavagarwal07/aso_sxs_viewer/config"
+	"github.com/pallavagarwal07/aso_sxs_viewer/createwindow"
+	"github.com/pallavagarwal07/aso_sxs_viewer/event"
 
 	"github.com/jezek/xgb/xproto"
 )

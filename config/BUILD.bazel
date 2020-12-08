@@ -7,7 +7,7 @@ go_library(
         "default.go",
         "extract_config.go",
     ],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/config",
+    importpath = "github.com/pallavagarwal07/aso_sxs_viewer/config",
     visibility = ["//visibility:public"],
     deps = [
         "//proto:go_default_library",

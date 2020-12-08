@@ -8,7 +8,7 @@ go_library(
         "window_darwin.go",
         "window_linux.go",
     ],
-    importpath = "github.com/googleinterns/aso_sxs_viewer/createwindow",
+    importpath = "github.com/pallavagarwal07/aso_sxs_viewer/createwindow",
     visibility = ["//visibility:public"],
     deps = [
         "//command:go_default_library",

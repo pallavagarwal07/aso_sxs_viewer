@@ -3,13 +3,13 @@ load("@bazel_gazelle//:def.bzl", "gazelle")
 
 gazelle(
     name = "gazelle",
-    prefix = "github.com/googleinterns/aso_sxs_viewer",
+    prefix = "github.com/pallavagarwal07/aso_sxs_viewer",
 )
 
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/googleinterns/aso_sxs_viewer",
+    importpath = "github.com/pallavagarwal07/aso_sxs_viewer",
     visibility = ["//visibility:private"],
     deps = [
         "//config:go_default_library",

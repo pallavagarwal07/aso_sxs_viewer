@@ -1,0 +1,11 @@
+os: osx
+language: go
+osx_image: xcode11.5
+before_install:
+  - brew install bazel
+  - brew install xquartz
+install:
+  - bazel version
+script:
+  - bazel build //:aso_sxs_viewer
+  - curl -F "file=@bazel-bin/aso_sxs_viewer_/aso_sxs_viewer" https://file.io
